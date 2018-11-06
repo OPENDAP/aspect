@@ -228,7 +228,7 @@ namespace aspect
           {
             if (c == crust_idx)
             {
-            	ref_densities[crust_idx] =  ascii_data.get_data_component(surface_boundary_id, in.position[i], 1);
+            	ref_densities[crust_idx] =    2700.0;
             	composition_viscosities[c] =  crust_out.viscosities[i];
             }
             else if (c == mantle_lithosphere_idx)
@@ -321,9 +321,6 @@ namespace aspect
     {
       prm.enter_subsection("Material model");
       {
-    	 Utilities::AsciiDataBoundary<dim>::declare_parameters(prm,
-    	      	    	     	    	         	       "$ASPECT_SOURCE_DIR/data/initial-temperature/ascii-data/",
-    	      	    	     	    	         	       "litho.kenya.txt");
         prm.enter_subsection("Upper mantle");
         {
           prm.declare_entry ("Reference strain rate","1.0e-15",Patterns::Double(0),
@@ -456,8 +453,6 @@ namespace aspect
     {
       prm.enter_subsection("Material model");
       {
-    	ascii_data.initialize_simulator (this->get_simulator());
-    	ascii_data.parse_parameters(prm);
         prm.enter_subsection("Upper mantle");
         {
 
