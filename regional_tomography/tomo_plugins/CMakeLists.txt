@@ -32,8 +32,8 @@ ENDIF ()
 
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
-SET(TARGET "edc_plugin")
+SET(TARGET "tomo_plugin")
 PROJECT(${TARGET})
 
-ADD_LIBRARY(${TARGET} SHARED lithosphere.cc upper_mantle.cc)
+ADD_LIBRARY(${TARGET} SHARED lithosphere.cc upper_mantle.cc  regional_tomography.cc)
 ASPECT_SETUP_PLUGIN(${TARGET})

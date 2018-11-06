@@ -35,18 +35,25 @@ namespace aspect
   {
     using namespace dealii;
 
-    namespace internal
-    {
-      namespace Boundary
-      {
-        class BoundaryLookup;
-      }
-    }
 
     template <int dim>
-    class UpperMantle : public MaterialModel::Interface<dim>, public ::aspect::SimulatorAccess<dim>
+    class UpperMantle:  public MaterialModel::Interface<dim>, public ::aspect::SimulatorAccess<dim>
     {
       public:
+
+        /**
+         * Constructor. Initialize variables.
+         */
+        UpperMantle ();
+
+        /**
+         * Initialization function. This function is called once at the
+         * beginning of the program after parse_parameters is run and after
+         * the SimulatorAccess (if applicable) is initialized.
+         */
+        virtual
+        void
+        initialize ();
 
         virtual void evaluate(const MaterialModel::MaterialModelInputs<dim> &in,
                               MaterialModel::MaterialModelOutputs<dim> &out) const;
@@ -137,6 +144,12 @@ namespace aspect
           maximum_composition
         } viscosity_averaging, density_averaging;
 
+        types::boundary_id surface_boundary_id;
+        /**
+         * Object containing the data profile.
+         */
+        aspect::Utilities::AsciiDataBoundary<dim> ascii_data;
+
         /**
          * The thermal conductivity.
          */
@@ -160,6 +173,7 @@ namespace aspect
          * Pointer to the material model used as the base model
          */
         std::shared_ptr<MaterialModel::Interface<dim> > base_model;
+
 
     };
 

@@ -19,30 +19,67 @@
 */
 
 
-#include "lithosphere.h"
+#include </Users/trajaona/project/kenya_plugins/lithosphere.h>
 #include <aspect/initial_temperature/interface.h>
 #include <aspect/postprocess/interface.h>
 #include <aspect/geometry_model/interface.h>
 #include <aspect/utilities.h>
 #include <deal.II/base/signaling_nan.h>
+#include <fstream>
+#include <iostream>
 
 
 namespace aspect
 {
   namespace InitialComposition
   {
+
+    template <int dim>
+    Lithosphere<dim>::Lithosphere ()
+    :
+	surface_boundary_id(5)
+	{}
+
+    template <int dim>
+    void
+	Lithosphere<dim>::initialize ()
+    {
+        // Find the boundary indicator that represents the surface
+        surface_boundary_id = this->get_geometry_model().translate_symbolic_boundary_name_to_id("outer");
+
+        std::set<types::boundary_id> surface_boundary_set;
+        surface_boundary_set.insert(surface_boundary_id);
+
+        // The input ascii table contains two components, the crust depth and the LAB depth
+        Utilities::AsciiDataBoundary<dim>::initialize(surface_boundary_set,
+                                                      2);
+    }
+
     template <int dim>
     double
     Lithosphere<dim>::
     initial_composition (const Point<dim> &position, const unsigned int n_comp) const
     {
       const double depth = this->get_geometry_model().depth(position);
-      const double temperature = this->get_initial_temperature_manager().initial_temperature(position);
+      std::array<double,dim> wcoord      = Utilities::Coordinates::WGS84_coordinates(position);
+
+      const Point<2> wpoint (wcoord[1], wcoord[2]);
+
+      //const double temperature = this->get_initial_temperature_manager().initial_temperature(position);
+      const double isotherm_depth              =
+    		  Utilities::AsciiDataBoundary<dim>::get_data_component(surface_boundary_id, position, 0);
+      const double moho_depth              =
+    		  Utilities::AsciiDataBoundary<dim>::get_data_component(surface_boundary_id, position, 1);
+
+      const std::vector<Point<2>> polygone_point_lists(boundaries_point_lists.size());
+
+      //for (unsigned int i =0 ; i < polygone_point_lists.size(); i++)
+    	//  polygone_point_lists[i] = boundaries_point_lists[i];
 
       // Crustal composition
-      if (depth < moho && n_comp == 0)
+      if (depth < moho_depth &&  n_comp == 0)
         return 1.;
-      else if (depth >= moho && temperature < LAB_isotherm && n_comp == 1)
+      else if (depth >= moho_depth && depth < isotherm_depth && n_comp == 1)
         return 1.;
       else
         return 0.;
@@ -55,6 +92,10 @@ namespace aspect
     {
       prm.enter_subsection("Initial composition model");
       {
+    	Utilities::AsciiDataBase<dim>::declare_parameters(prm,
+    	     	    	         	                      "$ASPECT_SOURCE_DIR/data/initial-temperature/ascii-data/",
+    	     	    	         	                      "litho.txt");
+
         prm.enter_subsection("Lithosphere");
         {
           prm.declare_entry ("Moho", "30000.0",
@@ -76,14 +117,18 @@ namespace aspect
     {
       prm.enter_subsection("Initial composition model");
       {
+    	Utilities::AsciiDataBase<dim>::parse_parameters(prm);
         prm.enter_subsection("Lithosphere");
         {
+
           moho                            = prm.get_double ("Moho");
           LAB_isotherm                    = prm.get_double ("LAB isotherm");
         }
         prm.leave_subsection();
       }
       prm.leave_subsection();
+
+
     }
 
   }

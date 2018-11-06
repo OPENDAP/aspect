@@ -24,10 +24,9 @@
  */
 
 #include "upper_mantle.h"
-#include <aspect/initial_temperature/interface.h>
-#include <aspect/initial_temperature/adiabatic_boundary.h>
 #include <aspect/adiabatic_conditions/interface.h>
 #include <aspect/postprocess/interface.h>
+#include <aspect/geometry_model/interface.h>
 #include <aspect/utilities.h>
 #include <deal.II/base/signaling_nan.h>
 
@@ -38,6 +37,28 @@ namespace aspect
 {
   namespace MaterialModel
   {
+
+  template <int dim>
+  UpperMantle<dim>::UpperMantle()
+    :
+  surface_boundary_id(1)
+   {}
+
+  template <int dim>
+  void
+  UpperMantle<dim>::initialize ()
+  {
+	  // Find the boundary indicator that represents the surface
+	        surface_boundary_id = this->get_geometry_model().translate_symbolic_boundary_name_to_id("outer");
+
+	        std::set<types::boundary_id> surface_boundary_set;
+	        surface_boundary_set.insert(surface_boundary_id);
+
+	        // The input ascii table contains two components, the crust depth and the LAB depth
+	        ascii_data.initialize(surface_boundary_set,
+	                              2);
+  }
+
     template <int dim>
     std::vector<double>
     UpperMantle<dim>::
@@ -72,8 +93,7 @@ namespace aspect
 
     template <int dim>
     double
-    UpperMantle<dim>::
-    average_value ( const std::vector<double> &composition,
+    UpperMantle<dim>::average_value ( const std::vector<double> &composition,
                     const std::vector<double> &parameter_values,
                     const enum averaging_scheme &average_type) const
     {
@@ -118,6 +138,8 @@ namespace aspect
         }
       return averaged_parameter;
     }
+
+
     template <int dim>
     double
     UpperMantle<dim>::
@@ -151,14 +173,15 @@ namespace aspect
                      std::pow(edot_ii,((1. - stress_exponent_dislocation)/stress_exponent_dislocation));
     }
     
-    template <>
-    void
-    UpperMantle<2>::evaluate(const MaterialModel::MaterialModelInputs<2> &in,
-                            MaterialModel::MaterialModelOutputs<2> &out) const
-    {
-      Assert (false, ExcNotImplemented());
+
+  //  template <>
+   // void
+   // UpperMantle<2>::evaluate(const MaterialModel::MaterialModelInputs<2> &in,
+                         //   MaterialModel::MaterialModelOutputs<2> &out) const
+   // {
+    //  Assert (false, ExcNotImplemented());
       //return 0;
-    }
+    //}
 
     template <int dim>
     void
@@ -174,7 +197,7 @@ namespace aspect
         {
           const double temperature = in.temperature[i];
           const double pressure= in.pressure[i];
-          const Point<3> pos = in.position[i];
+          const Point<dim> position = in.position[i];
           const std::vector<double> &composition = in.composition[i];
           const double c = (in.composition[i].size()>0)
                            ?
@@ -205,7 +228,7 @@ namespace aspect
           {
             if (c == crust_idx)
             {
-            	ref_densities[crust_idx] = 2700.0;
+            	ref_densities[crust_idx] =  ascii_data.get_data_component(surface_boundary_id, in.position[i], 1);
             	composition_viscosities[c] =  crust_out.viscosities[i];
             }
             else if (c == mantle_lithosphere_idx)
@@ -298,6 +321,9 @@ namespace aspect
     {
       prm.enter_subsection("Material model");
       {
+    	 Utilities::AsciiDataBoundary<dim>::declare_parameters(prm,
+    	      	    	     	    	         	       "$ASPECT_SOURCE_DIR/data/initial-temperature/ascii-data/",
+    	      	    	     	    	         	       "litho.kenya.txt");
         prm.enter_subsection("Upper mantle");
         {
           prm.declare_entry ("Reference strain rate","1.0e-15",Patterns::Double(0),
@@ -415,6 +441,7 @@ namespace aspect
                              Patterns::Double (0),
                              "The value of the reference compressibility. "
                              "Units: $1/Pa$.");
+
         }
         prm.leave_subsection();
       }
@@ -429,8 +456,11 @@ namespace aspect
     {
       prm.enter_subsection("Material model");
       {
+    	ascii_data.initialize_simulator (this->get_simulator());
+    	ascii_data.parse_parameters(prm);
         prm.enter_subsection("Upper mantle");
         {
+
           reference_rho                   = prm.get_double ("Reference density");
           reference_T                     = prm.get_double ("Reference temperature");
           eta                             = prm.get_double ("Reference viscosity");
@@ -489,6 +519,7 @@ namespace aspect
               AssertThrow(false, ExcMessage("Not a valid viscosity averaging scheme"));
 
           density_averaging = arithmetic;
+
         }
         prm.leave_subsection();
       }

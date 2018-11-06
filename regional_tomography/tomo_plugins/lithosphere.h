@@ -41,12 +41,19 @@ namespace aspect
      */
     template <int dim>
     class Lithosphere : public Interface<dim>,
-      public SimulatorAccess<dim>
+	  public Utilities::AsciiDataBoundary<dim>
     {
       public:
         /**
          * Constructor.
          */
+        Lithosphere ();
+
+        void
+        initialize ();
+
+        // avoid -Woverloaded-virtual:
+        using Utilities::AsciiDataBoundary<dim>::initialize;
 
         /**
          * Return the initial composition as a function of position and number
@@ -77,9 +84,11 @@ namespace aspect
 
       private:
 
+
         double  LAB_isotherm;
         double  moho;
-        double fault_width;
+        //double fault_width;
+        types::boundary_id surface_boundary_id;
     };
   }
 }

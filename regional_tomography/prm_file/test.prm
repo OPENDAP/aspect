@@ -1,12 +1,12 @@
 set Dimension                              = 3
-#set Additional shared libraries =  $ASPECT_DIR/edc_mada/edc_plugins/libedc_plugin.so
+set Additional shared libraries =  /Users/trajaona/project/kenya_plugins/libedc_plugin.so
 set Use years in output instead of seconds = true
 set CFL number = 0.25
 set End time                               = 0
-set Output directory                       = output-edc_mada.txt 
+set Output directory                       = kenya_regional_tomography_open_vertical_boundary
 set Nonlinear solver scheme                = single Advection, iterated Stokes
-set Nonlinear solver tolerance             = 1e-5
-set Max nonlinear iterations               = 50
+set Nonlinear solver tolerance             = 1
+set Max nonlinear iterations               = 0
 set Pressure normalization                 = surface
 set Surface pressure                       = 0
 
@@ -18,11 +18,11 @@ subsection Geometry model
   set Model name = chunk
 
   subsection Chunk
-    set Chunk minimum longitude = 35
-    set Chunk maximum longitude = 55
-    set Chunk minimum latitude = -28
-    set Chunk maximum latitude = -8
-    set Chunk inner radius = 5878137
+    set Chunk minimum longitude = 25
+    set Chunk maximum longitude = 40
+    set Chunk minimum latitude = -8
+    set Chunk maximum latitude =  8
+    set Chunk inner radius = 5718137
     set Chunk outer radius = 6378137
   end
 end
@@ -34,12 +34,13 @@ subsection Discretization
  end
 end
 
+
    
 subsection Initial temperature model
-  set Model name = adiabatic boundary
-  subsection Adiabatic boundary
-    set Data directory           = $ASPECT_SOURCE_DIR/input_files/
-    set Isotherm depth filename  = litho.africa.txt
+   set Model name = adiabatic boundary
+ subsection Ascii data model
+    set Data directory       = $ASPECT_SOURCE_DIR/data/initial-temperature/ascii-data/
+    set Data file name       = litho.kenya.txt
   end
 end
 
@@ -68,7 +69,11 @@ subsection Boundary temperature model
 end
 
 subsection Boundary velocity model
-  set Tangential velocity boundary indicators = 1,2,3,0,4,5 
+set Zero velocity boundary indicators = inner
+end
+
+subsection Boundary velocity model
+  set Tangential velocity boundary indicators = outer
 end
 
 
@@ -76,8 +81,14 @@ subsection Gravity model
   set Model name = ascii data
 end
 
+
+
 subsection Material model
   set Model name                 = upper mantle
+   subsection Ascii data model
+    set Data directory       = $ASPECT_SOURCE_DIR/data/initial-temperature/ascii-data/
+    set Data file name       = crust2.0.txt
+  end
   subsection Upper mantle
     set Base model                                 = visco plastic
     set Grain size                                 = 0.01
@@ -87,7 +98,7 @@ subsection Material model
     set Activation energie for diffusion creep     = 3.75e5
     set Prefactor for dislocation creep            = 6.52e-16
     set Activation energie for dislocation creep   = 5.3e5
-    set Activation volume for dislocation creep    = 14e-6 
+    set Activation volume for dislocation creep    = 18e-6 
     set Stress exponent for dislocation creep      = 3.5
     set Viscosity averaging scheme                 = harmonic
     set Maximum viscosity = 1e26
@@ -107,22 +118,17 @@ end
 end
 
 subsection Mesh refinement
-  set Initial global refinement                = 6
+  set Initial global refinement                = 3
   set Initial adaptive refinement              = 0
   set Time steps between mesh refinement       = 0
 end
 
 
 subsection Postprocess
-  set List of postprocessors = visualization, velocity statistics, basic statistics, depth average
+  set List of postprocessors = visualization, velocity statistics, basic statistics
 
-  subsection Depth average
-    set Number of zones = 50
-    set List of output variables = temperature,  viscosity, velocity magnitude
-    set Output format = txt
-  end 
   subsection Visualization
-    set List of output variables      = viscosity, density, strain rate
+    set List of output variables      = viscosity, density
     set Time between graphical output = 1.0
     set Output format = vtu
 end
@@ -130,7 +136,7 @@ end
 
 subsection Solver parameters
   subsection Stokes solver parameters
-    set Linear solver tolerance = 1e-6
+    set Linear solver tolerance = 1
     set Number of cheap Stokes solver steps = 100
   end
 end
