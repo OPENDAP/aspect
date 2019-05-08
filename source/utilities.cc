@@ -82,8 +82,8 @@ namespace aspect
       for (unsigned int i=0; i<rows.size(); ++i)
         {
           std::vector<std::string> current_columns = Utilities::possibly_extend_from_1_to_N(Utilities::split_string_list(rows[i]),
-                                                     n_columns,
-                                                     property_name);
+											    n_columns,
+											    property_name);
 
           for (unsigned int j=0; j<current_columns.size(); ++j)
             {
@@ -317,11 +317,11 @@ namespace aspect
 
 
     /**
-    * This is an internal deal.II function stolen from dof_tools.cc
-    *
-    * Return an array that for each dof on the reference cell lists the
-    * corresponding vector component.
-    */
+     * This is an internal deal.II function stolen from dof_tools.cc
+     *
+     * Return an array that for each dof on the reference cell lists the
+     * corresponding vector component.
+     */
     template <int dim, int spacedim>
     std::vector<unsigned char>
     get_local_component_association (const FiniteElement<dim,spacedim>  &fe,
@@ -401,12 +401,12 @@ namespace aspect
                                 * std::sin(th) * std::sin(th)),
                                (p - (ellipticity * ellipticity * radius * (std::cos(th)
                                                                            * std::cos(th) * std::cos(th)))))
-                    * (180. / numbers::PI);
+	  * (180. / numbers::PI);
 
         if (dim == 3)
           {
             ecoord[1] = std::atan2(position(1), position(0))
-                        * (180. / numbers::PI);
+	      * (180. / numbers::PI);
 
             /* Set all longitudes between [0,360]. */
             if (ecoord[1] < 0.)
@@ -452,22 +452,22 @@ namespace aspect
 
         switch (dim)
           {
-            case 2:
+	  case 2:
             {
               ccoord[0] = scoord[0] * std::cos(scoord[1]); // X
               ccoord[1] = scoord[0] * std::sin(scoord[1]); // Y
               break;
             }
-            case 3:
+	  case 3:
             {
               ccoord[0] = scoord[0] * std::sin(scoord[2]) * std::cos(scoord[1]); // X
               ccoord[1] = scoord[0] * std::sin(scoord[2]) * std::sin(scoord[1]); // Y
               ccoord[2] = scoord[0] * std::cos(scoord[2]); // Z
               break;
             }
-            default:
-              Assert (false, ExcNotImplemented());
-              break;
+	  default:
+	    Assert (false, ExcNotImplemented());
+	    break;
           }
 
         return ccoord;
@@ -529,7 +529,7 @@ namespace aspect
 
         switch (dim)
           {
-            case 2:
+	  case 2:
             {
               const double phi = r_phi_theta[1];
 
@@ -537,13 +537,13 @@ namespace aspect
               const double u_phi = spherical_vector[1];
 
               cartesian_vector[0] = std::cos(phi)*u_r
-                                    - std::sin(phi)*u_phi; // X
+		- std::sin(phi)*u_phi; // X
               cartesian_vector[1] = std::sin(phi)*u_r
-                                    + std::cos(phi)*u_phi; // Y
+		+ std::cos(phi)*u_phi; // Y
 
               break;
             }
-            case 3:
+	  case 3:
             {
               const double phi   = r_phi_theta[1];
               const double theta = r_phi_theta[2];
@@ -553,19 +553,19 @@ namespace aspect
               const double u_theta = spherical_vector[2];
 
               cartesian_vector[0] = std::cos(phi)*std::sin(theta)*u_r
-                                    - std::sin(phi)*u_theta
-                                    - std::cos(phi)*std::cos(theta)*u_phi; // X
+		- std::sin(phi)*u_theta
+		- std::cos(phi)*std::cos(theta)*u_phi; // X
               cartesian_vector[1] = std::sin(phi)*std::sin(theta)*u_r
-                                    + std::cos(phi)*u_theta
-                                    - std::sin(phi)*std::cos(theta)*u_phi; // Y
+		+ std::cos(phi)*u_theta
+		- std::sin(phi)*std::cos(theta)*u_phi; // Y
               cartesian_vector[2] = std::cos(theta)*u_r
-                                    + std::sin(theta)*u_phi;                 // Z
+		+ std::sin(theta)*u_phi;                 // Z
               break;
             }
 
-            default:
-              Assert (false, ExcNotImplemented());
-              break;
+	  default:
+	    Assert (false, ExcNotImplemented());
+	    break;
           }
 
         return cartesian_vector;
@@ -628,7 +628,7 @@ namespace aspect
               if (point_list[i][1] >= point[1])      // an upward crossing
                 {
                   const double is_left = (point_list[i][0] - point_list[j][0]) * (point[1] - point_list[j][1])
-                                         - (point[0] -  point_list[j][0]) * (point_list[i][1] - point_list[j][1]);
+		    - (point[0] -  point_list[j][0]) * (point_list[i][1] - point_list[j][1]);
 
                   if ( is_left > 0 && point_list[i][1] > point[1])
                     {
@@ -659,7 +659,7 @@ namespace aspect
               if (point_list[i][1]  <= point[1])     // a downward crossing
                 {
                   const double is_left = (point_list[i][0] - point_list[j][0]) * (point[1] - point_list[j][1])
-                                         - (point[0] -  point_list[j][0]) * (point_list[i][1] - point_list[j][1]);
+		    - (point[0] -  point_list[j][0]) * (point_list[i][1] - point_list[j][1]);
 
                   if ( is_left < 0)
                     {
@@ -794,7 +794,7 @@ namespace aspect
       std::array<Tensor<1,dim>,dim-1> return_value;
       switch (dim)
         {
-          case 2:
+	case 2:
           {
             // create a direction by swapping the two coordinates and
             // flipping one sign; this is orthogonal to 'v' and has
@@ -804,7 +804,7 @@ namespace aspect
             break;
           }
 
-          case 3:
+	case 3:
           {
             // In 3d, we can get two other vectors in a 3-step procedure:
             // - compute a 'w' that is definitely not collinear with 'v'
@@ -836,18 +836,18 @@ namespace aspect
             break;
           }
 
-          default:
-            Assert (false, ExcNotImplemented());
+	default:
+	  Assert (false, ExcNotImplemented());
         }
 
       return return_value;
     }
 
 
-//Evaluate the cosine and sine terms of a real spherical harmonic.
-//This is a fully normalized harmonic, that is to say, inner products
-//of these functions should integrate to a kronecker delta over
-//the surface of a sphere.
+    //Evaluate the cosine and sine terms of a real spherical harmonic.
+    //This is a fully normalized harmonic, that is to say, inner products
+    //of these functions should integrate to a kronecker delta over
+    //the surface of a sphere.
     std::pair<double,double> real_spherical_harmonic( const unsigned int l, // degree
                                                       const unsigned int m, // order
                                                       const double theta,   // colatitude (radians)
@@ -888,180 +888,171 @@ namespace aspect
           unsigned int filesize = numbers::invalid_unsigned_int;
 
 
-//----Only run if the user wishes to use the libdap packages----//
+	  //----Only run if the user wishes to use the libdap packages----//
 #if HAVE_LIBDAP
-         //Check to see if the prm file will be reading data from the disk or
-		// from a provided URL
-		if (filename.find("http://") == 0 || filename.find("https://") == 0 || filename.find("file://") == 0) {
-			libdap::Connect *url = 0;
-			url = new libdap::Connect(filename);
-			libdap::BaseTypeFactory factory;
-			libdap::DataDDS dds(&factory);
-			libdap::DAS das;
+	  //Check to see if the prm file will be reading data from the disk or
+	  // from a provided URL
+	  if (filename.find("http://") == 0 || filename.find("https://") == 0 
+	      || filename.find("file://") == 0) 
+	    {
+	    libdap::Connect *url = 0;
+	    url = new libdap::Connect(filename);
+	    libdap::BaseTypeFactory factory;
+	    libdap::DataDDS dds(&factory);
+	    libdap::DAS das;
 
-			url->request_data(dds, "");
-			url->request_das(das);
+	    url->request_data(dds, "");
+	    url->request_das(das);
 
+	    libdap::Array *urlArray;
 
-			//Array to store the url data
-			libdap::Array *urlArray;
+	    //Temporary vector that will hold the different arrays stored in urlArray
+	    std::vector<std::string> tmp;
+	    //Vector that will hold the arrays (columns) and the values within those arrays
+	    std::vector<std::vector<std::string>> columns;
 
-			//Temporary vector that will hold the different arrays stored in urlArray
-			std::vector<std::string> tmp;
-			//Vector that will hold the arrays (columns) and the values within those arrays
-			std::vector<std::vector<std::string>> columns;
+	    //Check dds values to make sure the arrays are of the same length and of type string
+	    for (libdap::DDS::Vars_iter i = dds.var_begin(); i != dds.var_end(); i++) {
+	      libdap::BaseType *btp = *i;
+	      if ((*i)->type() == libdap::dods_array_c) {
+		urlArray = static_cast <libdap::Array *>(btp);
+		if (urlArray->var() != NULL && urlArray->var()->type() == libdap::dods_str_c) {
+		  //The url Array contains a separate array for each column of data.
+		  // This will put each of these individual arrays into its own vector.
+		  urlArray->value(tmp);
+		  columns.push_back(tmp);
 
-
-			//Check dds values to make sure the arrays are of the same length and of type string
-			for (libdap::DDS::Vars_iter i = dds.var_begin(); i != dds.var_end(); i++) {
-			        libdap::BaseType *btp = *i;
-			        if ((*i)->type() == libdap::dods_array_c) {
-			            urlArray = static_cast <libdap::Array *>(btp);
-			            if (urlArray->var() != NULL && urlArray->var()->type() == libdap::dods_str_c) {
-							//The url Array contains a separate array for each column of data.
-							// This will put each of these individual arrays into its own vector.
-							urlArray->value(tmp);
-							columns.push_back(tmp);
-
-						}
-						else {
-							AssertThrow (false,
-							ExcMessage (std::string("Error when reading from url: ") + filename +
-									" Maybe it was not of the correct type?"));
-						}
-
-			        }
-			        else {
-			        		AssertThrow (false,
-			        	    ExcMessage (std::string("Error when reading from url: ") + filename +
-			        	    		" Maybe it was not of the correct type?"));
-			        }
-			    }
-
-
-			//Add the POINTS data that is required and found at the top of the data file.
-			// The POINTS values are set as attributes inside a table.
-			// Loop through the Attribute table to locate the points values within
-			std::vector<std::string> points;
-			libdap::AttrTable *table;
-			for (libdap::AttrTable::Attr_iter i = das.var_begin(); i != das.var_end(); i++) {
-				table = das.get_table(i);
-				if (table->get_attr("points") != "")
-					points.push_back(table->get_attr("points"));
-				else
-					break;
-			}
-
-			//Append the gathered POINTS in the proper format:
-			// "# POINTS: <val1> <val2> <val3>"
-			urlString << "# POINTS:";
-			for (unsigned int i = 0; i < points.size(); i++) {
-				urlString << " " << points[i];
-			}
-			urlString << "\n";
-
-			//Add the values from the arrays into the stringstream. The values are passed in
-			// per row with a character return added at the end of each row.
-			// TODO: Add a check to make sure that each column is the same size before writing
-			//		 to the stringstream
-			for (unsigned int i = 0; i < tmp.size(); i++) {
-				for (unsigned int j = 0; j < columns.size(); j++) {
-					urlString << columns[j][i];
-					urlString << " ";
-				}
-				urlString << "\n";
-			}
-
-
-			//--May need a second dds
-			//url->request_data(dds, "");
-
-
-  	  	  data_string = urlString.str();
-  	  	  filesize = data_string.size();
+		}
+		else {
+		  AssertThrow (false,
+			       ExcMessage (std::string("Error when reading from url: ") + filename +
+					   " Maybe it was not of the correct type?"));
 		}
 
-		else
+	      }
+	      else {
+		AssertThrow (false,
+			     ExcMessage (std::string("Error when reading from url: ") + filename +
+					 " Maybe it was not of the correct type?"));
+	      }
+	    }
+
+	    //Add the POINTS data that is required and found at the top of the data file.
+	    // The POINTS values are set as attributes inside a table.
+	    // Loop through the Attribute table to locate the points values within
+	    std::vector<std::string> points;
+	    libdap::AttrTable *table;
+	    for (libdap::AttrTable::Attr_iter i = das.var_begin(); i != das.var_end(); i++) {
+	      table = das.get_table(i);
+	      if (table->get_attr("points") != "")
+		points.push_back(table->get_attr("points"));
+	      else
+		break;
+	    }
+
+	    //Append the gathered POINTS in the proper format:
+	    // "# POINTS: <val1> <val2> <val3>"
+	    urlString << "# POINTS:";
+	    for (unsigned int i = 0; i < points.size(); i++) {
+	      urlString << " " << points[i];
+	    }
+	    urlString << "\n";
+
+	    //Add the values from the arrays into the stringstream. The values are passed in
+	    // per row with a character return added at the end of each row.
+	    // TODO: Add a check to make sure that each column is the same size before writing
+	    //		 to the stringstream
+	    for (unsigned int i = 0; i < tmp.size(); i++) {
+	      for (unsigned int j = 0; j < columns.size(); j++) {
+		urlString << columns[j][i];
+		urlString << " ";
+	      }
+	      urlString << "\n";
+	    }
+
+	    data_string = urlString.str();
+	    filesize = data_string.size();
+	  }
+
+	  else
+	    {
+	      std::ifstream filestream(filename.c_str());
+
+	      if (!filestream)
 		{
-          std::ifstream filestream(filename.c_str());
-
-          if (!filestream)
-            {
-              // broadcast failure state, then throw
-              MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
-              AssertThrow (false,
-                           ExcMessage (std::string("Could not open file <") + filename + ">."));
-              return data_string; // never reached
-            }
-
-
-          // Read data from disk
-          std::stringstream datastream;
-          filestream >> datastream.rdbuf();
-
-          if (!filestream.eof())
-            {
-              // broadcast failure state, then throw
-              MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
-              AssertThrow (false,
-                           ExcMessage (std::string("Reading of file ") + filename + " finished " +
-                                       "before the end of file was reached. Is the file corrupted or"
-                                       "too large for the input buffer?"));
-              return data_string; // never reached
-            }
-
-
-
-          data_string = datastream.str();
-          filesize = data_string.size();
-          }
-
-		// Distribute data_size and data across processes
-		MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
-		MPI_Bcast(&data_string[0],filesize,MPI_CHAR,0,comm);
-#else
-		if (filename.find("http://") == 0 || filename.find("https://") == 0 || filename.find("file://") == 0) {
-			  // broadcast failure state, then throw
-			  MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
-			  AssertThrow (false,
-						   ExcMessage (std::string("Reading of file ") + filename + " failed. " +
-								   "Make sure you have the dependencies for reading a url " +
-								   "(when running cmake make sure -DLIBDAP_ON=ON)"));
-			  return data_string; // never reached
+		  // broadcast failure state, then throw
+		  MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
+		  AssertThrow (false,
+			       ExcMessage (std::string("Could not open file <") + filename + ">."));
+		  return data_string; // never reached
 		}
 
-		std::ifstream filestream(filename.c_str());
 
-		if (!filestream)
-			{
-			  // broadcast failure state, then throw
-			  MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
-			  AssertThrow (false,
-						   ExcMessage (std::string("Could not open file <") + filename + ">."));
-			  return data_string; // never reached
-			}
+	      // Read data from disk
+	      std::stringstream datastream;
+	      filestream >> datastream.rdbuf();
 
-		// Read data from disk
-		std::stringstream datastream;
-		filestream >> datastream.rdbuf();
+	      if (!filestream.eof())
+		{
+		  // broadcast failure state, then throw
+		  MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
+		  AssertThrow (false,
+			       ExcMessage (std::string("Reading of file ") + filename + " finished " +
+					   "before the end of file was reached. Is the file corrupted or"
+					   "too large for the input buffer?"));
+		  return data_string; // never reached
+		}
 
-		if (!filestream.eof())
-			{
-			  // broadcast failure state, then throw
-			  MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
-			  AssertThrow (false,
-						   ExcMessage (std::string("Reading of file ") + filename + " finished " +
-									   "before the end of file was reached. Is the file corrupted or"
-									   "too large for the input buffer?"));
-			  return data_string; // never reached
-			}
+	      data_string = datastream.str();
+	      filesize = data_string.size();
+	    }
 
-		data_string = datastream.str();
-		filesize = data_string.size();
+	  // Distribute data_size and data across processes
+	  MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
+	  MPI_Bcast(&data_string[0],filesize,MPI_CHAR,0,comm);
+#else
+	  if (filename.find("http://") == 0 || filename.find("https://") == 0 || filename.find("file://") == 0) {
+	    // broadcast failure state, then throw
+	    MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
+	    AssertThrow (false,
+			 ExcMessage (std::string("Reading the URL '") + filename + "' failed. " +
+				     "Make sure you have the dependencies for reading a URL " +
+				     "(when running cmake make sure -DLIBDAP=TRUE)"));
+	    return data_string; // never reached
+	  }
 
-		// Distribute data_size and data across processes
-		MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
-		MPI_Bcast(&data_string[0],filesize,MPI_CHAR,0,comm);
+	  std::ifstream filestream(filename.c_str());
+
+	  if (!filestream)
+	    {
+	      // broadcast failure state, then throw
+	      MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
+	      AssertThrow (false,
+			   ExcMessage (std::string("Could not open file <") + filename + ">."));
+	      return data_string; // never reached
+	    }
+
+	  // Read data from disk
+	  std::stringstream datastream;
+	  filestream >> datastream.rdbuf();
+
+	  if (!filestream.eof())
+	    {
+	      // broadcast failure state, then throw
+	      MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
+	      AssertThrow (false,
+			   ExcMessage (std::string("Reading of file ") + filename + " finished " +
+				       "before the end of file was reached. Is the file corrupted or"
+				       "too large for the input buffer?"));
+	      return data_string; // never reached
+	    }
+
+	  data_string = datastream.str();
+	  filesize = data_string.size();
+
+	  // Distribute data_size and data across processes
+	  MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
+	  MPI_Bcast(&data_string[0],filesize,MPI_CHAR,0,comm);
 #endif
         }
 
@@ -1156,10 +1147,10 @@ namespace aspect
         }
     }
 
-// tk does the cubic spline interpolation that can be used between different spherical layers in the mantle.
-// This interpolation is based on the script spline.h, which was downloaded from
-// http://kluge.in-chemnitz.de/opensource/spline/spline.h   //
-// copyright (C) 2011, 2014 Tino Kluge (ttk448 at gmail.com)
+    // tk does the cubic spline interpolation that can be used between different spherical layers in the mantle.
+    // This interpolation is based on the script spline.h, which was downloaded from
+    // http://kluge.in-chemnitz.de/opensource/spline/spline.h   //
+    // copyright (C) 2011, 2014 Tino Kluge (ttk448 at gmail.com)
     namespace tk
     {
       /**
@@ -1168,88 +1159,88 @@ namespace aspect
        */
       class band_matrix
       {
-        public:
-          /**
-           * Constructor, see resize()
-           */
-          band_matrix(int dim, int n_u, int n_l);
-          /**
-           * Resize to a @p dim by @dim matrix with given number
-           * of off-diagonals.
-           */
-          void resize(int dim, int n_u, int n_l);
+      public:
+	/**
+	 * Constructor, see resize()
+	 */
+	band_matrix(int dim, int n_u, int n_l);
+	/**
+	 * Resize to a @p dim by @dim matrix with given number
+	 * of off-diagonals.
+	 */
+	void resize(int dim, int n_u, int n_l);
 
-          /**
-           * Return the dimension of the matrix
-           */
-          int dim() const;
+	/**
+	 * Return the dimension of the matrix
+	 */
+	int dim() const;
 
-          /**
-           * Number of off-diagonals above.
-           */
-          int num_upper() const
-          {
-            return m_upper.size()-1;
-          }
+	/**
+	 * Number of off-diagonals above.
+	 */
+	int num_upper() const
+	{
+	  return m_upper.size()-1;
+	}
 
-          /**
-           * Number of off-diagonals below.
-           */
-          int num_lower() const
-          {
-            return m_lower.size()-1;
-          }
+	/**
+	 * Number of off-diagonals below.
+	 */
+	int num_lower() const
+	{
+	  return m_lower.size()-1;
+	}
 
-          /**
-           * Writeable access to element A(i,j), indices going from
-           * i=0,...,dim()-1
-           */
-          double &operator () (int i, int j);
-          /**
-           * Read-only access
-           */
-          double operator () (int i, int j) const;
+	/**
+	 * Writeable access to element A(i,j), indices going from
+	 * i=0,...,dim()-1
+	 */
+	double &operator () (int i, int j);
+	/**
+	 * Read-only access
+	 */
+	double operator () (int i, int j) const;
 
-          /**
-           * second diagonal (used in LU decomposition), saved in m_lower[0]
-           */
-          double &saved_diag(int i);
+	/**
+	 * second diagonal (used in LU decomposition), saved in m_lower[0]
+	 */
+	double &saved_diag(int i);
 
-          /**
-           * second diagonal (used in LU decomposition), saved in m_lower[0]
-           */
-          double saved_diag(int i) const;
+	/**
+	 * second diagonal (used in LU decomposition), saved in m_lower[0]
+	 */
+	double saved_diag(int i) const;
 
-          /**
-           * LU-Decomposition of a band matrix
-           */
-          void lu_decompose();
+	/**
+	 * LU-Decomposition of a band matrix
+	 */
+	void lu_decompose();
 
-          /**
-           * solves Ux=y
-           */
-          std::vector<double> r_solve(const std::vector<double> &b) const;
+	/**
+	 * solves Ux=y
+	 */
+	std::vector<double> r_solve(const std::vector<double> &b) const;
 
-          /**
-           * solves Ly=b
-           */
-          std::vector<double> l_solve(const std::vector<double> &b) const;
+	/**
+	 * solves Ly=b
+	 */
+	std::vector<double> l_solve(const std::vector<double> &b) const;
 
-          /**
-           * Solve Ax=b and builds LU decomposition using lu_decompose()
-           * if @p is_lu_decomposed is false.
-           */
-          std::vector<double> lu_solve(const std::vector<double> &b,
-                                       bool is_lu_decomposed=false);
-        private:
-          /**
-           * diagonal and off-diagonals above
-           */
-          std::vector< std::vector<double> > m_upper;
-          /**
-           * diagonals below the diagonal
-           */
-          std::vector< std::vector<double> > m_lower;
+	/**
+	 * Solve Ax=b and builds LU decomposition using lu_decompose()
+	 * if @p is_lu_decomposed is false.
+	 */
+	std::vector<double> lu_solve(const std::vector<double> &b,
+				     bool is_lu_decomposed=false);
+      private:
+	/**
+	 * diagonal and off-diagonals above
+	 */
+	std::vector< std::vector<double> > m_upper;
+	/**
+	 * diagonals below the diagonal
+	 */
+	std::vector< std::vector<double> > m_lower;
       };
 
       band_matrix::band_matrix(int dim, int n_u, int n_l)
@@ -1512,7 +1503,7 @@ namespace aspect
                   {
                     m_a[i] = 1.0/3.0*(m_b[i+1]-m_b[i])/(x[i+1]-x[i]);
                     m_c[i] = (y[i+1]-y[i])/(x[i+1]-x[i])
-                             - 1.0/3.0*(2.0*m_b[i]+m_b[i+1])*(x[i+1]-x[i]);
+		      - 1.0/3.0*(2.0*m_b[i]+m_b[i+1])*(x[i+1]-x[i]);
                   }
               }
           }
@@ -2004,7 +1995,7 @@ namespace aspect
 
 
       for (typename std::set<types::boundary_id>::const_iterator
-           boundary_id = boundary_ids.begin();
+	     boundary_id = boundary_ids.begin();
            boundary_id != boundary_ids.end(); ++boundary_id)
         {
           std::shared_ptr<Utilities::AsciiDataLookup<dim-1> > lookup;
@@ -2074,52 +2065,52 @@ namespace aspect
 
       switch (dim)
         {
-          case 2:
-            if ((boundary_id == 2) || (boundary_id == 3))
-              {
-                boundary_dimensions[0] = 0;
-              }
-            else if ((boundary_id == 0) || (boundary_id == 1))
-              {
-                boundary_dimensions[0] = 1;
-              }
-            else
-              {
-                boundary_dimensions[0] = numbers::invalid_unsigned_int;
-                AssertThrow(false,ExcNotImplemented());
-              }
+	case 2:
+	  if ((boundary_id == 2) || (boundary_id == 3))
+	    {
+	      boundary_dimensions[0] = 0;
+	    }
+	  else if ((boundary_id == 0) || (boundary_id == 1))
+	    {
+	      boundary_dimensions[0] = 1;
+	    }
+	  else
+	    {
+	      boundary_dimensions[0] = numbers::invalid_unsigned_int;
+	      AssertThrow(false,ExcNotImplemented());
+	    }
 
-            break;
+	  break;
 
-          case 3:
-            if ((boundary_id == 4) || (boundary_id == 5))
-              {
-                boundary_dimensions[0] = 0;
-                boundary_dimensions[1] = 1;
-              }
-            else if ((boundary_id == 0) || (boundary_id == 1))
-              {
-                boundary_dimensions[0] = 1;
-                boundary_dimensions[1] = 2;
-              }
-            else if ((boundary_id == 2) || (boundary_id == 3))
-              {
-                boundary_dimensions[0] = 0;
-                boundary_dimensions[1] = 2;
-              }
-            else
-              {
-                boundary_dimensions[0] = numbers::invalid_unsigned_int;
-                boundary_dimensions[1] = numbers::invalid_unsigned_int;
-                AssertThrow(false,ExcNotImplemented());
-              }
+	case 3:
+	  if ((boundary_id == 4) || (boundary_id == 5))
+	    {
+	      boundary_dimensions[0] = 0;
+	      boundary_dimensions[1] = 1;
+	    }
+	  else if ((boundary_id == 0) || (boundary_id == 1))
+	    {
+	      boundary_dimensions[0] = 1;
+	      boundary_dimensions[1] = 2;
+	    }
+	  else if ((boundary_id == 2) || (boundary_id == 3))
+	    {
+	      boundary_dimensions[0] = 0;
+	      boundary_dimensions[1] = 2;
+	    }
+	  else
+	    {
+	      boundary_dimensions[0] = numbers::invalid_unsigned_int;
+	      boundary_dimensions[1] = numbers::invalid_unsigned_int;
+	      AssertThrow(false,ExcNotImplemented());
+	    }
 
-            break;
+	  break;
 
-          default:
-            for (unsigned int d=0; d<dim-1; ++d)
-              boundary_dimensions[d] = numbers::invalid_unsigned_int;
-            AssertThrow(false,ExcNotImplemented());
+	default:
+	  for (unsigned int d=0; d<dim-1; ++d)
+	    boundary_dimensions[d] = numbers::invalid_unsigned_int;
+	  AssertThrow(false,ExcNotImplemented());
         }
       return boundary_dimensions;
     }
@@ -2185,7 +2176,7 @@ namespace aspect
       if (!fexists(result) && fexists(compatible_result))
         {
           this->get_pcout() << "WARNING: Filename convention concerning geometry boundary "
-                            "names changed. Please rename '" << compatible_result << "'"
+	    "names changed. Please rename '" << compatible_result << "'"
                             << " to '" << result << "'"
                             << std::endl;
           return compatible_result;
@@ -2202,7 +2193,7 @@ namespace aspect
       if (time_dependent && (this->get_time() - first_data_file_model_time >= 0.0))
         {
           const double time_steps_since_start = (this->get_time() - first_data_file_model_time)
-                                                / data_file_time_step;
+	    / data_file_time_step;
           // whether we need to update our data files. This looks so complicated
           // because we need to catch increasing and decreasing file orders and all
           // possible first_data_file_model_times and first_data_file_numbers.
@@ -2233,18 +2224,18 @@ namespace aspect
               const bool load_both_files = std::abs(current_file_number - old_file_number) >= 1;
 
               for (typename std::map<types::boundary_id,
-                   std::shared_ptr<Utilities::AsciiDataLookup<dim-1> > >::iterator
-                   boundary_id = lookups.begin();
+		     std::shared_ptr<Utilities::AsciiDataLookup<dim-1> > >::iterator
+		     boundary_id = lookups.begin();
                    boundary_id != lookups.end(); ++boundary_id)
                 update_data(boundary_id->first,load_both_files);
             }
 
           time_weight = time_steps_since_start
-                        - std::abs(current_file_number - first_data_file_number);
+	    - std::abs(current_file_number - first_data_file_number);
 
           Assert ((0 <= time_weight) && (time_weight <= 1),
                   ExcMessage (
-                    "Error in set_current_time. Time_weight has to be in [0,1]"));
+			      "Error in set_current_time. Time_weight has to be in [0,1]"));
         }
     }
 
@@ -2911,23 +2902,23 @@ namespace aspect
     {
       switch (op)
         {
-          case Utilities::Operator::add:
+	case Utilities::Operator::add:
           {
             return x + y;
           }
-          case Utilities::Operator::subtract:
+	case Utilities::Operator::subtract:
           {
             return x - y;
           }
-          case Utilities::Operator::minimum:
+	case Utilities::Operator::minimum:
           {
             return std::min(x,y);
           }
-          case Utilities::Operator::maximum:
+	case Utilities::Operator::maximum:
           {
             return std::max(x,y);
           }
-          default:
+	default:
           {
             Assert (false, ExcInternalError());
           }
@@ -3015,22 +3006,22 @@ namespace aspect
 
       switch (coordinate_system)
         {
-          case Coordinates::CoordinateSystem::cartesian:
-            coordinate[0] = coordinates[0];
-            break;
+	case Coordinates::CoordinateSystem::cartesian:
+	  coordinate[0] = coordinates[0];
+	  break;
 
-          case Coordinates::CoordinateSystem::spherical:
-            coordinate[0] = coordinates[1];
-            break;
+	case Coordinates::CoordinateSystem::spherical:
+	  coordinate[0] = coordinates[1];
+	  break;
 
-          case Coordinates::CoordinateSystem::ellipsoidal:
-            coordinate[0] = coordinates[1];
-            break;
+	case Coordinates::CoordinateSystem::ellipsoidal:
+	  coordinate[0] = coordinates[1];
+	  break;
 
-          default:
-            coordinate[0] = 0;
-            Assert (false, ExcNotImplemented());
-            break;
+	default:
+	  coordinate[0] = 0;
+	  Assert (false, ExcNotImplemented());
+	  break;
         }
 
       return coordinate;
@@ -3043,23 +3034,23 @@ namespace aspect
 
       switch (coordinate_system)
         {
-          case Coordinates::CoordinateSystem::cartesian:
-            coordinate[0] = coordinates[0];
-            coordinate[1] = coordinates[1];
-            break;
+	case Coordinates::CoordinateSystem::cartesian:
+	  coordinate[0] = coordinates[0];
+	  coordinate[1] = coordinates[1];
+	  break;
 
-          case Coordinates::CoordinateSystem::spherical:
-            coordinate[0] = coordinates[1];
-            coordinate[1] = coordinates[2];
-            break;
+	case Coordinates::CoordinateSystem::spherical:
+	  coordinate[0] = coordinates[1];
+	  coordinate[1] = coordinates[2];
+	  break;
 
-          case Coordinates::CoordinateSystem::ellipsoidal:
-            coordinate[0] = coordinates[1];
-            coordinate[1] = coordinates[2];
-            break;
+	case Coordinates::CoordinateSystem::ellipsoidal:
+	  coordinate[0] = coordinates[1];
+	  coordinate[1] = coordinates[2];
+	  break;
 
-          default:
-            Assert (false, ExcNotImplemented());
+	default:
+	  Assert (false, ExcNotImplemented());
         }
 
       return coordinate;
@@ -3070,32 +3061,32 @@ namespace aspect
     {
       switch (coordinate_system)
         {
-          case Coordinates::CoordinateSystem::cartesian:
-            return coordinates[dim-1];
+	case Coordinates::CoordinateSystem::cartesian:
+	  return coordinates[dim-1];
 
-          case Coordinates::CoordinateSystem::spherical:
-            return coordinates[0];
+	case Coordinates::CoordinateSystem::spherical:
+	  return coordinates[0];
 
-          case Coordinates::CoordinateSystem::ellipsoidal:
-            return coordinates[0];
+	case Coordinates::CoordinateSystem::ellipsoidal:
+	  return coordinates[0];
 
-          default:
-            Assert (false, ExcNotImplemented());
+	default:
+	  Assert (false, ExcNotImplemented());
         }
 
       return 0;
     }
 
 
-// Explicit instantiations
+    // Explicit instantiations
 
-#define INSTANTIATE(dim) \
-  template \
-  IndexSet extract_locally_active_dofs_with_component(const DoFHandler<dim> &, \
-                                                      const ComponentMask &); \
-  template \
-  std::vector<std::string> \
-  expand_dimensional_variable_names<dim> (const std::vector<std::string> &var_declarations);
+#define INSTANTIATE(dim)						\
+    template								\
+    IndexSet extract_locally_active_dofs_with_component(const DoFHandler<dim> &, \
+							const ComponentMask &); \
+    template								\
+    std::vector<std::string>						\
+    expand_dimensional_variable_names<dim> (const std::vector<std::string> &var_declarations);
 
     ASPECT_INSTANTIATE(INSTANTIATE)
 
