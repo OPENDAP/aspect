@@ -49,7 +49,7 @@ namespace aspect
 
       // The input ascii table contains two components, the crust depth and the LAB depth
       Utilities::AsciiDataBoundary<dim>::initialize(surface_boundary_set,
-                                                    2);
+                                                    1);
     }
 
     template <int dim>
