@@ -1067,6 +1067,116 @@ namespace aspect
 	      filesize = data_string.size();
 	    }
 
+
+	  //------ NetCDF ------//
+	  //kneumiller - 11/24/19
+	  else if (filename.find(".nc") != std::string::npos) {
+	      int ncid, ndims, nvars, nattr;
+	      int latId, lonId, depthId, dvsId = 0;
+	      size_t points;
+
+	      std::stringstream datastream;
+	      std::string completeString;
+
+	      std::vector<int> pointsList;
+
+	      nc_open(filename.c_str(), NC_NOWRITE, &ncid);
+	      nc_inq(ncid, &ndims, &nvars, &nattr, 0); //Get the number of dimensions, variabls, and attributes
+
+	      //Get the size (POINTS) for each variable in the dataset and store them
+	      completeString += "# POINTS: ";
+	      for (int i = 0; i < nvars; i++) {
+	          //FIXME: //Probably do not need to store the variable name or variable ID
+	          //nc_inq_var(ncid, i, &varName, 0, 0, 0, &nattr);
+	          nc_inq_dimlen(ncid, i, &points);
+	          pointsList.push_back(points);
+	      }
+
+	      //Search the netcdf file for variable of the corresponding name and store its ID
+	      nc_inq_varid(ncid, "latitude", &latId);
+	      nc_inq_varid(ncid, "longitude", &lonId);
+	      nc_inq_varid(ncid, "depth", &depthId); //TODO: This needs to be dynamic and pulled from the prm
+	      nc_inq_varid(ncid, "dvs", &dvsId);    //TODO: This should also probably be dynamic
+
+	      uint latSize;
+	      uint lonSize;
+	      uint depthSize;
+
+	      //TODO: Right now we know that there should always be three variables in the Iris data
+	      // with points that matter (lat, lon, depth/radius). This will need to be changed for future .nc files
+	      for (int i = 0; i < nvars; i++) {
+	          if (i == latId) {
+	              latSize = pointsList[i];
+                  completeString += to_string(pointsList[i]);
+                  completeString += " ";
+	          }
+	          if (i == lonId) {
+	              lonSize = pointsList[i];
+	              completeString += to_string(pointsList[i]);
+                  completeString += " ";
+              }
+	          if (i == depthId) {
+	              depthSize = pointsList[i];
+	              completeString += to_string(pointsList[i]);
+                  completeString += " ";
+	          }
+	      }
+	      completeString += "\n";
+
+	      //Make an array that will hold the arrays of the dataset
+	      //This array will store the values of the single array variables (lat, lon, depth/radius)
+	      std::vector<std::vector<float>> datasetVars;
+
+	      //Temporary vector to hold the values of each variable array before it's pushed into datasetVars
+	      std::vector<float> tmp;
+
+	      //Loop through and store the values of each variable into its own array
+	      for (int i = 0; i < 3; i++) {
+	          //resize the vector for each variable before reading it in (netcdf will be upset otherwise)
+	          tmp.resize(pointsList[i]);
+              nc_get_var(ncid, i, &tmp[0]);   //Read entire variable data into an array
+              datasetVars.push_back(tmp);
+	      }
+
+          //Array that will work as a 3 dimensional array to store the dvs values
+	      std::vector<float> dvs;
+	      dvs.resize(latSize*lonSize*depthSize);
+	      nc_get_var(ncid, dvsId, &dvs[0]);
+
+	      //Loop through the single dimmension array as if it were 3D
+	      for (uint i = 0; i < depthSize; i++) {
+              for (uint j = 0; j < latSize; j++) {
+                  for (uint k = 0; k < lonSize; k++) {
+                      //Use this formula to calculate the location in the single dimension array as if it were 3D
+                      uint index = i*latSize*lonSize + j*lonSize + k;
+                      completeString += to_string(dvs[index]);
+                      completeString += " ";
+                  }
+                  completeString += "\n";
+              }
+          }
+
+#if 0
+	      /*For adding the lat, lon, and third variable (depth/radius) value to the complete string.
+	       * Currently I don't think these values are used outside of this function, however, I'm leaving
+	       *  the code inside an #if/#endif statement in case the values are found to be needed.
+	       */
+
+	      //Add the values to the string sequentially from each array
+	      for (int i = 0; i < rows; i++) {
+	          for (int j = 0; j < datasetVars.size(); j++) {
+	              completeString += to_string(datasetVars[j][i]);
+	              completeString += " ";
+	          }
+	          completeString += "\n";
+	      }
+#endif
+
+	      data_string = completeString;
+	      filesize = data_string.size();
+	  }
+
+
 	  else
 	    {
 	      std::ifstream filestream(filename.c_str());
