@@ -452,7 +452,7 @@ IF (ASPECT_WITH_WORLD_BUILDER)
   ENDFOREACH()
 ENDIF()
 
-ADD_EXECUTABLE(${TARGET} ${TARGET_SRC})
+ADD_EXECUTABLE(${TARGET} ${TARGET_SRC} include/aspect/initial_temperature/netcdf_data.h)
 DEAL_II_SETUP_TARGET(${TARGET})
 
 FIND_PACKAGE(PerpleX QUIET HINTS ./contrib/perplex/install/ ../ ../../ $ENV{PERPLEX_DIR})

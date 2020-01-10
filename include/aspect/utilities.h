@@ -33,7 +33,7 @@
 #include <deal.II/fe/component_mask.h>
 
 #include <aspect/coordinate_systems.h>
-
+#include <aspect/initial_temperature/netcdf_data.h>
 
 
 namespace aspect
@@ -764,6 +764,13 @@ namespace aspect
          * parameter).
          */
         double scale_factor;
+
+        /**
+         * Keep track of the names of the variables to look up inside the netcdf file.
+         * The names will be looked up within the prm file and stored here. The values will
+         * then need to be passed to the appropriate location.
+         */
+        aspect::InitialTemperature::NetcdfData names;  //TODO: make into unique pointer
     };
 
     /**

@@ -949,6 +949,11 @@ namespace aspect
     }
 
 
+    /**
+     * Store the value of the variable names for lookup inside a netcdf file.
+     */
+    aspect::InitialTemperature::NetcdfData netcdfNames;  //TODO: Make unique pointer
+
     //Added a check to read data files from a url
     //Author: Kodi Neumiller 10/9/18
     std::string
@@ -1093,10 +1098,10 @@ namespace aspect
 	      }
 
 	      //Search the netcdf file for variable of the corresponding name and store its ID
-	      nc_inq_varid(ncid, "latitude", &latId);
-	      nc_inq_varid(ncid, "longitude", &lonId);
-	      nc_inq_varid(ncid, "depth", &depthId); //TODO: This needs to be dynamic and pulled from the prm
-	      nc_inq_varid(ncid, "dvs", &dvsId);    //TODO: This should also probably be dynamic
+	      nc_inq_varid(ncid, netcdfNames.getVar1().c_str(), &latId);
+	      nc_inq_varid(ncid, netcdfNames.getVar2().c_str(), &lonId);
+	      nc_inq_varid(ncid, netcdfNames.getVar3().c_str(), &depthId);
+	      nc_inq_varid(ncid, netcdfNames.getValuesVar().c_str(), &dvsId);
 
 	      uint latSize;
 	      uint lonSize;
@@ -2136,6 +2141,26 @@ namespace aspect
     {
       prm.enter_subsection (subsection_name);
       {
+        prm.declare_entry ("Netcdf Var 1", "latitude",
+                             Patterns::Anything (),
+                             "Specify the name of the first variable to be read "
+                             "from the netcdf file."
+        );
+        prm.declare_entry ("Netcdf Var 2", "longitude",
+                             Patterns::Anything (),
+                             "Specify the name of the second variable to be read "
+                             "from the netcdf file."
+        );
+        prm.declare_entry ("Netcdf Var 3", "depth",
+                             Patterns::Anything (),
+                             "Specify the name of the third variable to be read "
+                             "from the netcdf file."
+        );
+        prm.declare_entry ("Netcdf Values", "dvs",
+                             Patterns::Anything (),
+                             "Specify the name of the variable in which the 3D array "
+                             "of values is stored."
+        );
         prm.declare_entry ("Data directory",
                            default_directory,
                            Patterns::DirectoryName (),
@@ -2173,6 +2198,12 @@ namespace aspect
     {
       prm.enter_subsection (subsection_name);
       {
+        netcdfNames.setVar1(prm.get("Netcdf Var 1"));
+        netcdfNames.setVar2(prm.get("Netcdf Var 2"));
+        netcdfNames.setVar3(prm.get("Netcdf Var 3"));
+        netcdfNames.setValuesVar(prm.get("Netcdf Values"));
+
+        cout << "test names: " << netcdfNames.getVar1() << endl;
         // Get the path to the data files. If it contains a reference
         // to $ASPECT_SOURCE_DIR, replace it by what CMake has given us
         // as a #define
