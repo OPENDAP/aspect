@@ -498,6 +498,32 @@ namespace aspect
 
 
   template <int dim>
+  void Simulator<dim>::advance_time (const double step_size)
+  {
+    old_time_step = time_step;
+    time_step = step_size;
+    time += time_step;
+    ++timestep_number;
+
+    // prepare for the next time step by shifting solution vectors
+    // by one time step. In timestep 0 (just increased in the
+    // line above) initialize both old_solution
+    // and old_old_solution with the currently computed solution.
+    if (timestep_number == 1)
+      {
+        old_old_solution      = solution;
+        old_solution          = solution;
+      }
+    else
+      {
+        old_old_solution      = old_solution;
+        old_solution          = solution;
+      }
+  }
+
+
+
+  template <int dim>
   double Simulator<dim>::compute_time_step () const
   {
     const QIterated<dim> quadrature_formula (QTrapez<1>(),
@@ -565,6 +591,22 @@ namespace aspect
 
               material_model->evaluate(in, out);
 
+              if (parameters.formulation_temperature_equation
+                  == Parameters<dim>::Formulation::TemperatureEquation::reference_density_profile)
+                {
+                  // Overwrite the density by the reference density coming from the
+                  // adiabatic conditions as required by the formulation
+                  for (unsigned int q=0; q<n_q_points; ++q)
+                    out.densities[q] = adiabatic_conditions->density(in.position[q]);
+                }
+              else if (parameters.formulation_temperature_equation
+                       == Parameters<dim>::Formulation::TemperatureEquation::real_density)
+                {
+                  // use real density
+                }
+              else
+                AssertThrow(false, ExcNotImplemented());
+
 
               // Evaluate thermal diffusivity at each quadrature point and
               // calculate the corresponding conduction timestep, if applicable
@@ -583,7 +625,7 @@ namespace aspect
                   if (thermal_diffusivity > 0)
                     {
                       min_local_conduction_timestep = std::min(min_local_conduction_timestep,
-                                                               parameters.CFL_number*pow(cell->minimum_vertex_distance(),2)
+                                                               parameters.CFL_number*pow(cell->minimum_vertex_distance(),2.)
                                                                / thermal_diffusivity);
                     }
                 }
@@ -605,24 +647,26 @@ namespace aspect
     double new_time_step = std::min(min_convection_timestep,
                                     min_conduction_timestep);
 
-    if (new_time_step == std::numeric_limits<double>::max())
-      {
-        // In some models the velocity is zero, either because that is the prescribed
-        // Stokes solution, or just because there is no buoyancy and nothing is moving.
-        // If this is the case, and if we either do not compute the conduction time
-        // step or do not have any conduction, it is somewhat arbitrary what time step
-        // we should choose. In that case, set the time step to the 'Maximum time step'.
-        new_time_step = parameters.maximum_time_step;
-      }
+    AssertThrow (new_time_step > 0,
+                 ExcMessage("The time step length for the each time step needs to be positive, "
+                            "but the computed step length was: " + std::to_string(new_time_step) + ". "
+                            "Please check for non-positive material properties."));
 
-    // make sure that the timestep doesn't increase too fast
+    // Make sure we do not exceed the maximum time step length. This can happen
+    // if velocities get too small or even zero in models that are stably stratified
+    // or use prescribed velocities.
+    new_time_step = std::min(new_time_step, parameters.maximum_time_step);
+
+    // Make sure that the time step doesn't increase too fast
     if (time_step != 0)
       new_time_step = std::min(new_time_step, time_step + time_step * parameters.maximum_relative_increase_time_step);
-    else
+
+    // Make sure we do not exceed the maximum length for the first time step
+    if (timestep_number == 0)
       new_time_step = std::min(new_time_step, parameters.maximum_first_time_step);
 
-    new_time_step = termination_manager.check_for_last_time_step(std::min(new_time_step,
-                                                                          parameters.maximum_time_step));
+    // Make sure we reduce the time step length appropriately if we terminate after this step
+    new_time_step = termination_manager.check_for_last_time_step(new_time_step);
 
     return new_time_step;
   }
@@ -2373,6 +2417,7 @@ namespace aspect
   template bool Simulator<dim>::maybe_do_initial_refinement (const unsigned int max_refinement_level); \
   template void Simulator<dim>::maybe_refine_mesh (const double new_time_step, unsigned int &max_refinement_level); \
   template double Simulator<dim>::compute_time_step () const; \
+  template void Simulator<dim>::advance_time (const double step_size); \
   template void Simulator<dim>::make_pressure_rhs_compatible(LinearAlgebra::BlockVector &vector); \
   template void Simulator<dim>::output_statistics(); \
   template void Simulator<dim>::write_plugin_graph(std::ostream &) const; \

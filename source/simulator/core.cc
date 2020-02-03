@@ -28,16 +28,10 @@
 #include <aspect/stokes_matrix_free.h>
 #include <aspect/mesh_deformation/interface.h>
 #include <aspect/citation_info.h>
+#include <aspect/postprocess/particles.h>
 
-#ifdef ASPECT_USE_WORLD_BUILDER
-#  include <world_builder/world.h>
-#else
-// We need a definition of World to be able to compile, so just provide an empty class:
-namespace WorldBuilder
-{
-  class World
-  {};
-}
+#ifdef ASPECT_WITH_WORLD_BUILDER
+#include <world_builder/world.h>
 #endif
 
 #include <aspect/simulator/assemblers/interface.h>
@@ -113,7 +107,7 @@ namespace aspect
     {
       if (geometry_model.has_curved_elements())
         return std_cxx14::make_unique<MappingQ<dim>>(4, true);
-      if (dynamic_cast<const InitialTopographyModel::ZeroTopography<dim>*>(&initial_topography_model) != nullptr)
+      if (Plugins::plugin_type_matches<const InitialTopographyModel::ZeroTopography<dim>>(initial_topography_model))
         return std_cxx14::make_unique<MappingCartesian<dim>>();
 
       return std_cxx14::make_unique<MappingQ1<dim>>();
@@ -184,13 +178,13 @@ namespace aspect
     gravity_model (GravityModel::create_gravity_model<dim>(prm)),
     prescribed_stokes_solution (PrescribedStokesSolution::create_prescribed_stokes_solution<dim>(prm)),
     adiabatic_conditions (AdiabaticConditions::create_adiabatic_conditions<dim>(prm)),
-#ifdef ASPECT_USE_WORLD_BUILDER
+#ifdef ASPECT_WITH_WORLD_BUILDER
     world_builder (parameters.world_builder_file != "" ?
                    std_cxx14::make_unique<WorldBuilder::World>(parameters.world_builder_file) :
                    nullptr),
 #endif
     boundary_heat_flux (BoundaryHeatFlux::create_boundary_heat_flux<dim>(prm)),
-
+    particle_world(nullptr),
     time (numbers::signaling_nan<double>()),
     time_step (numbers::signaling_nan<double>()),
     old_time_step (numbers::signaling_nan<double>()),
@@ -396,6 +390,16 @@ namespace aspect
     postprocess_manager.initialize_simulator (*this);
     postprocess_manager.parse_parameters (prm);
 
+    if (postprocess_manager.template has_matching_postprocessor<Postprocess::Particles<dim> >())
+      {
+        particle_world.reset(new Particle::World<dim>());
+        if (SimulatorAccess<dim> *sim = dynamic_cast<SimulatorAccess<dim>*>(particle_world.get()))
+          sim->initialize_simulator (*this);
+
+        particle_world->parse_parameters(prm);
+        particle_world->initialize();
+      }
+
     mesh_refinement_manager.initialize_simulator (*this);
     mesh_refinement_manager.parse_parameters (prm);
 
@@ -505,6 +509,7 @@ namespace aspect
   template <int dim>
   Simulator<dim>::~Simulator ()
   {
+    particle_world.reset(nullptr);
     // wait if there is a thread that's still writing the statistics
     // object (set from the output_statistics() function)
     output_statistics_thread.join();
@@ -1714,6 +1719,12 @@ namespace aspect
           break;
         }
 
+        case NonlinearSolver::no_Advection_single_Stokes:
+        {
+          solve_no_advection_single_stokes();
+          break;
+        }
+
         case NonlinearSolver::iterated_Advection_and_Stokes:
         {
           solve_iterated_advection_and_stokes();
@@ -1760,6 +1771,18 @@ namespace aspect
           Assert (false, ExcNotImplemented());
       }
 
+    if (particle_world.get() != nullptr)
+      {
+        // Do not advect the particles in the initial refinement stage
+        const bool in_initial_refinement = (timestep_number == 0)
+                                           && (pre_refinement_step < parameters.initial_adaptive_refinement);
+        if (!in_initial_refinement)
+          // Advance the particles in the world to the current time
+          particle_world->advance_timestep();
+
+        if (particle_world->get_property_manager().need_update() == Particle::Property::update_output_step)
+          particle_world->update_particles();
+      }
     pcout << std::endl;
   }
 
@@ -1885,39 +1908,20 @@ namespace aspect
         const double new_time_step = compute_time_step();
 
         // see if we want to refine the mesh
-        maybe_refine_mesh(new_time_step,max_refinement_level);
+        maybe_refine_mesh(new_time_step, max_refinement_level);
 
         // see if we want to write a timing summary
         maybe_write_timing_output();
 
         // update values for timestep, increment time step by one.
-        old_time_step = time_step;
-        time_step = new_time_step;
-        time += time_step;
-        ++timestep_number;
+        advance_time(new_time_step);
 
-        // prepare for the next time step by shifting solution vectors
-        // by one time step. In timestep 0 (just increased in the
-        // line above) initialize both old_solution
-        // and old_old_solution with the currently computed solution.
-        if (timestep_number == 1)
-          {
-            old_old_solution      = solution;
-            old_solution          = solution;
-          }
-        else
-          {
-            old_old_solution      = old_solution;
-            old_solution          = solution;
-          }
-
-        // check whether to terminate the simulation. the
-        // first part of the pair indicates whether to terminate
-        // the execution; the second indicates whether to do one
-        // more checkpoint
+        // Check whether to terminate the simulation. The first part of the
+        // pair indicates whether to terminate the execution; the second
+        // indicates whether to do one more checkpoint:
         const std::pair<bool,bool> termination = termination_manager.execute();
 
-        const bool checkpoint_written = maybe_write_checkpoint(last_checkpoint_time,termination);
+        const bool checkpoint_written = maybe_write_checkpoint(last_checkpoint_time, termination);
         if (checkpoint_written)
           last_checkpoint_time = std::time(nullptr);
 
