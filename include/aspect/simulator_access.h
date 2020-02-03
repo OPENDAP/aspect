@@ -25,6 +25,7 @@
 #include <aspect/global.h>
 #include <aspect/parameters.h>
 #include <aspect/introspection.h>
+#include <aspect/particle/world.h>
 
 #include <deal.II/base/table_handler.h>
 #include <deal.II/base/timer.h>
@@ -48,18 +49,6 @@ namespace WorldBuilder
 namespace aspect
 {
   using namespace dealii;
-
-#if DEAL_II_VERSION_GTE(9,1,0)
-  /**
-   * The ConstraintMatrix class was deprecated in deal.II 9.1 in favor
-   * of AffineConstraints. To make the name available for ASPECT
-   * nonetheless, use a `using` declaration. This injects the name
-   * into the `aspect` namespace, where it is visible before the
-   * deprecated name in the `dealii` namespace, thereby suppressing
-   * the deprecation message.
-   */
-  using ConstraintMatrix = class dealii::AffineConstraints<double>;
-#endif
 
   // forward declarations:
   template <int dim> class Simulator;
@@ -150,6 +139,12 @@ namespace aspect
   }
 
   template <int dim> class NewtonHandler;
+
+
+  namespace Particle
+  {
+    template <int dim> class World;
+  }
 
   /**
    * SimulatorAccess is a base class for different plugins like postprocessors.
@@ -752,7 +747,7 @@ namespace aspect
        */
       const NewtonHandler<dim> &
       get_newton_handler () const;
-
+#ifdef ASPECT_WITH_WORLD_BUILDER
       /**
        * Return a reference to the world builder that controls the setup of
        * initial conditions.
@@ -762,7 +757,7 @@ namespace aspect
        */
       const WorldBuilder::World &
       get_world_builder () const;
-
+#endif
       /**
        * Return a reference to the mesh deformation handler. This function will
        * throw an exception if mesh deformation is not activated.
@@ -889,6 +884,22 @@ namespace aspect
        */
       const Postprocess::Manager<dim> &
       get_postprocess_manager () const;
+
+      /**
+       * Returns a const reference to the particle world, in case anyone
+       * wants to query something about particles.
+       */
+      const Particle::World<dim> &
+      get_particle_world() const;
+
+      /**
+       * Returns a reference to the particle world, in case anyone wants to
+       * change something within the particle world. Use with care, usually
+       * you want to only let the functions within the particle subsystem
+       * change member variables of the particle world.
+       */
+      Particle::World<dim> &
+      get_particle_world();
 
       /** @} */
 

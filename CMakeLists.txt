@@ -61,6 +61,9 @@ ENDIF()
 
 
 SET(ASPECT_USE_PETSC OFF CACHE BOOL "Use PETSc instead of Trilinos if set to 'on'.")
+IF(ASPECT_USE_PETSC)
+    MESSAGE(FATAL_ERROR "Using PETSc by setting ASPECT_USE_PETSC to ON is currently not supported, see https://github.com/geodynamics/aspect/issues/3338 for details.")
+ENDIF()
 
 MESSAGE(STATUS "Using ASPECT_USE_PETSC = '${ASPECT_USE_PETSC}'")
 
@@ -113,6 +116,43 @@ FOREACH(_source_file ${TARGET_SRC})
 ENDFOREACH()
 
 
+SET(ASPECT_WITH_WORLD_BUILDER ON CACHE BOOL "Whether to enable compiling aspect with the Geodynamic World Builder.")
+message(STATUS "ASPECT_WITH_WORLD_BUILDER = '${ASPECT_WITH_WORLD_BUILDER}'")
+if(ASPECT_WITH_WORLD_BUILDER)
+  # Check whether we can find the WorldBuilder.
+  SET(WORLD_BUILDER_SOURCE_DIR "" CACHE PATH "Provide an external World Builder directory to be compiled with ASPECT. \
+    If the path is not not provided or the World Builder is not found in the provided location, the version in the contrib folder is is used.")
+  IF (NOT EXISTS ${WORLD_BUILDER_SOURCE_DIR}/VERSION)
+    MESSAGE(STATUS "World Builder not found. Using internal version.")
+    SET(WORLD_BUILDER_SOURCE_DIR "${CMAKE_SOURCE_DIR}/contrib/world_builder/" CACHE PATH "" FORCE)
+  ENDIF()
+
+  # Always include the header files.
+  INCLUDE_DIRECTORIES("${WORLD_BUILDER_SOURCE_DIR}/include/")
+
+  INCLUDE("${WORLD_BUILDER_SOURCE_DIR}/cmake/version.cmake")
+  MESSAGE(STATUS "Using World Builder version ${WORLD_BUILDER_VERSION} found at ${WORLD_BUILDER_SOURCE_DIR}.")
+
+  # add source and include dirs:
+  FILE(GLOB_RECURSE wb_files "${WORLD_BUILDER_SOURCE_DIR}/source/*.cc")
+  LIST(APPEND TARGET_SRC ${wb_files})
+
+  # generate config.cc and include it:
+  CONFIGURE_FILE("${WORLD_BUILDER_SOURCE_DIR}/source/config.cc.in" "${CMAKE_BINARY_DIR}/world_builder_config.cc" @ONLY)
+  LIST(INSERT TARGET_SRC 0 "${CMAKE_BINARY_DIR}/world_builder_config.cc")
+
+  # set ASPECT_ENABLE_WORLD_BUILDER define for all source files:
+  FOREACH(_source_file ${wb_files})
+    SET_PROPERTY(SOURCE ${_source_file} PROPERTY COTIRE_EXCLUDED TRUE ) 
+  ENDFOREACH()
+
+  FOREACH(_source_file ${TARGET_SRC})
+    SET_PROPERTY(SOURCE ${_source_file} APPEND PROPERTY COMPILE_DEFINITIONS ASPECT_WITH_WORLD_BUILDER=1)
+  ENDFOREACH()
+  
+  SET_PROPERTY(SOURCE "${CMAKE_BINARY_DIR}/world_builder_config.cc" PROPERTY COTIRE_EXCLUDED TRUE )
+endif()
+
 
 # load in version info and export it
 FILE(STRINGS "${CMAKE_SOURCE_DIR}/VERSION" ASPECT_PACKAGE_VERSION LIMIT_COUNT 1)
@@ -147,7 +187,6 @@ CONFIGURE_FILE(
   ${CMAKE_BINARY_DIR}/forinstall/AspectConfig.cmake
   @ONLY
 )
-
 
 # Next, set up the testsuite
 
@@ -425,32 +464,6 @@ IF (ASPECT_PRECOMPILE_HEADERS)
   ENDIF()
 ENDIF()
 
-# Check whether we can find the WorldBuilder and enable it.
-SET(ASPECT_WITH_WORLD_BUILDER ON CACHE BOOL "If ON the World Builder is compiled togheter with ASPECT.")
-IF (NOT EXISTS ${CMAKE_SOURCE_DIR}/contrib/WorldBuilder/VERSION)
-  MESSAGE(STATUS "World Builder not found.")
-  SET(ASPECT_WITH_WORLD_BUILDER OFF CACHE BOOL "" FORCE)
-ENDIF()
-IF (ASPECT_WITH_WORLD_BUILDER)
-  SET(WORLD_BUILDER_SOURCE_DIR "${CMAKE_SOURCE_DIR}/contrib/WorldBuilder")
-  INCLUDE("${WORLD_BUILDER_SOURCE_DIR}/cmake/version.cmake")
-  MESSAGE(STATUS "World Builder version ${WORLD_BUILDER_VERSION} found.")
-
-  # add source and include dirs:
-  FILE(GLOB_RECURSE _files "contrib/WorldBuilder/source/*.cc")
-  LIST(APPEND TARGET_SRC ${_files})
-  INCLUDE_DIRECTORIES("${WORLD_BUILDER_SOURCE_DIR}/include/")
-
-  # generate config.cc and include it:
-  CONFIGURE_FILE("${WORLD_BUILDER_SOURCE_DIR}/source/config.cc.in" "${CMAKE_BINARY_DIR}/world_builder_config.cc" @ONLY)
-  LIST(INSERT TARGET_SRC 0 "${CMAKE_BINARY_DIR}/world_builder_config.cc")
-
-  # set ASPECT_USE_WORLD_BUILDER define for all source files:
-  FOREACH(_source_file ${TARGET_SRC})
-    SET_PROPERTY(SOURCE ${_source_file}
-                 APPEND PROPERTY COMPILE_DEFINITIONS ASPECT_USE_WORLD_BUILDER=1)
-  ENDFOREACH()
-ENDIF()
 
 ADD_EXECUTABLE(${TARGET} ${TARGET_SRC} include/aspect/initial_temperature/netcdf_data.h)
 DEAL_II_SETUP_TARGET(${TARGET})
@@ -486,6 +499,26 @@ IF(LIBDAP)
 	ELSE()
 	  MESSAGE(STATUS "libdap package not found")
 	ENDIF()
+ENDIF()
+
+# Find the libdap package so that Aspect can connect to the OPeNDAP servers
+# Author: Kodi Neumiller
+SET(ASPECT_WITH_LIBDAP OFF CACHE BOOL "Check if the user wants to compile ASPECT with the libdap libraries.")
+MESSAGE(STATUS "Using ASPECT_WITH_LIBDAP = '${ASPECT_WITH_LIBDAP}'")
+IF(ASPECT_WITH_LIBDAP)
+  LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}/cmake/modules")
+  FIND_PACKAGE(LIBDAP)
+  IF(${LIBDAP_FOUND})
+    INCLUDE_DIRECTORIES(${LIBDAP_INCLUDE_DIRS})
+    TARGET_LINK_LIBRARIES(${TARGET} ${LIBDAP_LIBRARIES})
+    FOREACH(_source_file ${TARGET_SRC})
+      SET_PROPERTY(SOURCE ${_source_file}
+              APPEND PROPERTY COMPILE_DEFINITIONS HAVE_LIBDAP=1)
+    ENDFOREACH()
+    MESSAGE(STATUS "LIBDAP found at ${LIBDAP_LIBRARY}\n")
+  ELSE()
+    MESSAGE(FATAL_ERROR "LIBDAP not found. Disable ASPECT_WITH_LIBDAP or specify a hint to your installation directory with LIBDAP_DIR.")
+  ENDIF()
 ENDIF()
 
 

@@ -67,6 +67,7 @@ DEAL_II_ENABLE_EXTRA_DIAGNOSTICS
 #include <aspect/termination_criteria/interface.h>
 #include <aspect/postprocess/interface.h>
 #include <aspect/adiabatic_conditions/interface.h>
+#include <aspect/particle/world.h>
 
 #include <boost/iostreams/tee.hpp>
 #include <boost/iostreams/stream.hpp>
@@ -134,6 +135,18 @@ namespace aspect
     template <int dim>      class Interface;
     template <int dim>      class Manager;
   }
+
+  struct DefectCorrectionResiduals
+  {
+    double initial_residual;
+    double velocity_residual;
+    double pressure_residual;
+    double residual;
+    double residual_old;
+    double switch_initial_residual;
+    double newton_residual_for_derivative_scaling_factor;
+    std::pair<double,double> stokes_residuals;
+  };
 
   /**
    * This is the main class of ASPECT. It implements the overall simulation
@@ -534,6 +547,18 @@ namespace aspect
        * This function implements one scheme for the various
        * steps necessary to assemble and solve the nonlinear problem.
        *
+       * The `no Advection, single Stokes' scheme only solves the Stokes system and
+       * ignores compositions and the temperature equation.
+       *
+       * This function is implemented in
+       * <code>source/simulator/solver_schemes.cc</code>.
+       */
+      void solve_no_advection_single_stokes ();
+
+      /**
+       * This function implements one scheme for the various
+       * steps necessary to assemble and solve the nonlinear problem.
+       *
        * The `first timestep only, single Stokes' scheme only solves the Stokes system,
        * for the initial timestep. This results in a `steady state' velocity field for
        * particle calculations.
@@ -704,6 +729,20 @@ namespace aspect
        */
       double assemble_and_solve_stokes (const bool compute_initial_residual = false,
                                         double *initial_nonlinear_residual = nullptr);
+
+      /**
+       * Assemble and solve the defect correction form of the Stokes equation.
+       * This function takes a structure of DefectCorrectionResiduals which
+       * contains information about different residuals. The information in
+       * this structure is updated by this function. The parameter use_picard
+       * forces the use of the defect correction Picard iteration, if set to 'true' no
+       * Newton derivatives are added to the matrix.
+       *
+       * This function is implemented in
+       * <code>source/simulator/solver_schemes.cc</code>.
+       */
+      void assemble_and_solve_defect_correction_Stokes(DefectCorrectionResiduals &dcr,
+                                                       bool use_picard);
 
       /**
        * Initiate the assembly of one advection matrix and right hand side and
@@ -1470,6 +1509,15 @@ namespace aspect
       double compute_time_step () const;
 
       /**
+       * Advance the current time by the given @p step_size and update the
+       * solution vectors as needed.
+       *
+       * This function is implemented in
+       * <code>source/simulator/helper_functions.cc</code>.
+       */
+      void advance_time (const double step_size);
+
+      /**
        * Compute the artificial diffusion coefficient value on a cell given
        * the values and gradients of the solution passed as arguments.
        *
@@ -1731,10 +1779,17 @@ namespace aspect
       InitialComposition::Manager<dim>                                        initial_composition_manager;
       InitialTemperature::Manager<dim>                                        initial_temperature_manager;
       const std::unique_ptr<AdiabaticConditions::Interface<dim> >             adiabatic_conditions;
+#ifdef ASPECT_WITH_WORLD_BUILDER
       const std::unique_ptr<WorldBuilder::World>                              world_builder;
+#endif
       BoundaryVelocity::Manager<dim>                                          boundary_velocity_manager;
       std::map<types::boundary_id,std::unique_ptr<BoundaryTraction::Interface<dim> > > boundary_traction;
       const std::unique_ptr<BoundaryHeatFlux::Interface<dim> >                boundary_heat_flux;
+
+      /**
+       * The world holding the particles
+       */
+      std::unique_ptr<Particle::World<dim> > particle_world;
 
       /**
        * @}

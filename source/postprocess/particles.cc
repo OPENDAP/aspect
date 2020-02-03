@@ -100,13 +100,13 @@ namespace aspect
             if (n_components == dim)
               {
 #if DEAL_II_VERSION_GTE(9,1,0)
-                vector_datasets.push_back(std::make_tuple(field_position+1,
-                                                          field_position+n_components,
+                vector_datasets.push_back(std::make_tuple(property_index_to_output_index[field_position],
+                                                          property_index_to_output_index[field_position]+n_components-1,
                                                           field_name,
                                                           DataComponentInterpretation::component_is_part_of_vector));
 #else
-                vector_datasets.push_back(std::make_tuple(field_position+1,
-                                                          field_position+n_components,
+                vector_datasets.push_back(std::make_tuple(property_index_to_output_index[field_position],
+                                                          property_index_to_output_index[field_position]+n_components-1,
                                                           field_name));
 #endif
               }
@@ -192,34 +192,6 @@ namespace aspect
       // make sure a thread that may still be running in the background,
       // writing data, finishes
       background_thread.join ();
-    }
-
-    template <int dim>
-    void
-    Particles<dim>::generate_particles()
-    {
-      world.generate_particles();
-    }
-
-    template <int dim>
-    void
-    Particles<dim>::initialize_particles()
-    {
-      world.initialize_particles();
-    }
-
-    template <int dim>
-    const Particle::World<dim> &
-    Particles<dim>::get_particle_world() const
-    {
-      return world;
-    }
-
-    template <int dim>
-    Particle::World<dim> &
-    Particles<dim>::get_particle_world()
-    {
-      return world;
     }
 
     template <int dim>
@@ -363,12 +335,7 @@ namespace aspect
       if (std::isnan(last_output_time))
         last_output_time = this->get_time() - output_interval;
 
-      // Do not advect the particles in the initial refinement stage
-      const bool in_initial_refinement = (this->get_timestep_number() == 0)
-                                         && (this->get_pre_refinement_step() < this->get_parameters().initial_adaptive_refinement);
-      if (!in_initial_refinement)
-        // Advance the particles in the world to the current time
-        world.advance_timestep();
+      const Particle::World<dim> &world = this->get_particle_world();
 
       statistics.add_value("Number of advected particles",world.n_global_particles());
 
@@ -377,10 +344,6 @@ namespace aspect
       if (this->get_time() < last_output_time + output_interval)
         return std::make_pair("Number of advected particles:",
                               Utilities::int_to_string(world.n_global_particles()));
-
-
-      if (world.get_property_manager().need_update() == Particle::Property::update_output_step)
-        world.update_particles();
 
       if (output_file_number == numbers::invalid_unsigned_int)
         output_file_number = 0;
@@ -598,7 +561,7 @@ namespace aspect
       std::ostringstream os;
       aspect::oarchive oa (os);
 
-      world.save(os);
+      this->get_particle_world().save(os);
       oa << (*this);
 
       status_strings["Particles"] = os.str();
@@ -616,7 +579,7 @@ namespace aspect
           aspect::iarchive ia (is);
 
           // Load the particle world
-          world.load(is);
+          this->get_particle_world().load(is);
 
           ia >> (*this);
         }
@@ -757,12 +720,6 @@ namespace aspect
         prm.leave_subsection ();
       }
       prm.leave_subsection ();
-
-      // Initialize the particle world
-      if (SimulatorAccess<dim> *sim = dynamic_cast<SimulatorAccess<dim>*>(&world))
-        sim->initialize_simulator (this->get_simulator());
-      world.parse_parameters(prm);
-      world.initialize();
     }
   }
 }
