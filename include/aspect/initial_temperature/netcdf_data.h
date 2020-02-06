@@ -29,62 +29,70 @@
 
 namespace aspect
 {
-    namespace InitialTemperature
+  namespace InitialTemperature
+  {
+    using namespace std;
+    /**
+     * Used to store variable information inside an object.
+     * The netcdf_data object can be used to look up values for variables in a netcdf file.
+     * This will allow us to store variable names, id's, etc inside a prm file and then call the netcdf_data
+     *  object when we need to lookup a specfic variable's data by reference.
+     */
+    class NetcdfData
     {
-        using namespace std;
+      public:
         /**
-         * Used to store variable information inside an object.
-         * The netcdf_data object can be used to look up values for variables in a netcdf file.
-         * This will allow us to store variable names, id's, etc inside a prm file and then call the netcdf_data
-         *  object when we need to lookup a specfic variable's data by reference.
+         * Constructor
          */
-         class NetcdfData
-         {
-         public:
-             /**
-              * Constructor
-              */
-             NetcdfData() {}
+        NetcdfData() {}
 
-             /**
-              * Destructor
-              */
-             virtual ~NetcdfData() {}
+        /**
+         * Destructor
+         */
+        virtual ~NetcdfData() {}
 
-             //** Getters **//
-             string getVar1() {
-                 return var1;
-             }
-             string getVar2() {
-                 return var2;
-             }
-             string getVar3() {
-                 return var3;
-             }
-             string getValuesVar() {
-                 return valuesVar;
-             }
+        //** Getters **//
+        string getVar1()
+        {
+          return var1;
+        }
+        string getVar2()
+        {
+          return var2;
+        }
+        string getVar3()
+        {
+          return var3;
+        }
+        string getValuesVar()
+        {
+          return valuesVar;
+        }
 
-             /** Setters **/
-             void setVar1(string newVal) {
-                 var1 = newVal;
-             }
-             void setVar2(string newVal) {
-                 var2 = newVal;
-             }
-             void setVar3(string newVal) {
-                 var3 = newVal;
-             }
-             void setValuesVar(string newVal) {
-                 valuesVar = newVal;
-             }
+        /** Setters **/
+        void setVar1(string newVal)
+        {
+          var1 = newVal;
+        }
+        void setVar2(string newVal)
+        {
+          var2 = newVal;
+        }
+        void setVar3(string newVal)
+        {
+          var3 = newVal;
+        }
+        void setValuesVar(string newVal)
+        {
+          valuesVar = newVal;
+        }
 
-         private:
-             string var1;
-             string var2;
-             string var3;
-             string valuesVar;
-         };
-    }
+      private:
+        string var1;
+        string var2;
+        string var3;
+        string valuesVar;
+    };
+  }
 }
 #endif //ASPECT_OPENDAP_NETCDF_DATA_H

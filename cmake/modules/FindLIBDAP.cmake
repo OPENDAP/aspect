@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-## ---------------------------------------------------------------------
-##
-## Copyright (C) 2018 by Kodi Neumiller, James Gallagher
-##
-## ---------------------------------------------------------------------
-=======
 # Copyright (C) 2020 by the authors of the ASPECT code.
 #
 # This file is part of ASPECT.
@@ -22,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ASPECT; see the file LICENSE.  If not see
 # <http://www.gnu.org/licenses/>.
->>>>>>> 8ebc364051639af1e0c30a778129d17e3e7848b4
+
 
 # Try to find the Libdap library
 
@@ -35,6 +28,9 @@ SET_IF_EMPTY(LIBDAP_DIR "$ENV{LIBDAP_INC}")
 
 SET(LIBDAP_DIR "" CACHE PATH "An optional hint to the libdap installation directory")
 SET_IF_EMPTY(LIBDAP_DIR "$ENV{LIBDAP_DIR}")
+
+SET(NETCDF_DIR "" CACHE PATH "An alternative path to the netcdf library")
+SET_IF_EMPTY(NETCDF_DIR "$ENV{NETCDF_DIR}")
 
 # Clear the cache of previous values
 UNSET (LIBDAP_INCLUDE_DIR CACHE)
@@ -118,3 +114,34 @@ IF(LIBDAP_LIBRARY AND LIBDAP_CLIENT_LIBRARY AND LIBDAP_CONFIG_EXECUTABLE AND LIB
 ELSE()
     SET(LIBDAP_FOUND FALSE)
 ENDIF()
+
+
+# Find the netcdf library that supports opendap
+FIND_PROGRAM(NC_CONFIG_EXECUTABLE
+        NAMES nc-config
+        HINTS ${NETCDF_DIR})
+
+IF(NC_CONFIG_EXECUTABLE)
+    EXECUTE_PROCESS(COMMAND ${NC_CONFIG_EXECUTABLE} --libs
+            OUTPUT_VARIABLE _libs
+            ERROR_QUIET
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+    STRING(REPLACE " " ";" _libs "${_libs}")
+    SET(_path "")
+    FOREACH(_lib ${_libs})
+        IF (${_lib} MATCHES "^-L")
+            STRING(SUBSTRING ${_lib} 2 -1 _path)
+        ENDIF()
+        IF (${_lib} MATCHES "^-lnetcdf")
+            SET(NETCDF_PATH "${_path}")
+        ENDIF()
+    ENDFOREACH()
+ENDIF()
+
+FIND_LIBRARY(NETCDF_LIBRARY
+        NAMES libnetcdf.so libnetcdf.dylib
+        HINTS ${NETCDF_PATH})
+
+MESSAGE(STATUS "  NETCDF_LIBRARIES: ${NETCDF_LIBRARY}")
+
+SET(NETCDF_LIBRARIES ${NETCDF_LIBRARY})

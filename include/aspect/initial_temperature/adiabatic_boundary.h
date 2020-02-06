@@ -28,69 +28,69 @@
 
 namespace aspect
 {
-    namespace InitialTemperature
+  namespace InitialTemperature
+  {
+    using namespace dealii;
+
+    /**
+     * A class that computes an initial temperature field based
+     * on a user-defined adiabatic boundary for the 3D ellipsoid
+     * chunk geometry model. It discretizes the model domain into
+     * two regions separated by an isotherm boundary below which
+     * the temperature increases adiabatically. Above the
+     * user-defined isotherm boundary the temperature linearly
+     * increases from a surface temperature (273.15 K or 0 degree C)
+     * to the isotherm (1673.15 K or 1600 degree C). The user
+     * defines the location of the isotherm boundary with an ascii
+     * data file with the format defined in the ASPECT manual. Note
+     * that the latitudinal and longitudinal bounds of the ascii input
+     * data file need to be at least 1 degree wider than the bounds
+     * you use to define the region of your ellipsoid chunk geometry.
+     *
+     * This plugin is developed by Tahiry Rajaonarison and D. Sarah Stamps.
+     */
+    template <int dim>
+    class AdiabaticBoundary : public Interface<dim>,  public Utilities::AsciiDataBoundary<dim>
     {
-        using namespace dealii;
+      public:
 
         /**
-         * A class that computes an initial temperature field based
-         * on a user-defined adiabatic boundary for the 3D ellipsoid
-         * chunk geometry model. It discretizes the model domain into
-         * two regions separated by an isotherm boundary below which
-         * the temperature increases adiabatically. Above the
-         * user-defined isotherm boundary the temperature linearly
-         * increases from a surface temperature (273.15 K or 0 degree C)
-         * to the isotherm (1673.15 K or 1600 degree C). The user
-         * defines the location of the isotherm boundary with an ascii
-         * data file with the format defined in the ASPECT manual. Note
-         * that the latitudinal and longitudinal bounds of the ascii input
-         * data file need to be at least 1 degree wider than the bounds
-         * you use to define the region of your ellipsoid chunk geometry.
-         *
-         * This plugin is developed by Tahiry Rajaonarison and D. Sarah Stamps.
+         * Constructor.
          */
-        template <int dim>
-        class AdiabaticBoundary : public Interface<dim>,  public Utilities::AsciiDataBoundary<dim>
-        {
-        public:
+        AdiabaticBoundary ();
 
-            /**
-             * Constructor.
-             */
-            AdiabaticBoundary ();
+        void
+        initialize ();
 
-            void
-            initialize ();
+        // avoid -Woverloaded-virtual:
+        using Utilities::AsciiDataBoundary<dim>::initialize;
 
-            // avoid -Woverloaded-virtual:
-            using Utilities::AsciiDataBoundary<dim>::initialize;
+        /**
+         * Return the initial temperature as a function of position.
+         */
+        virtual
+        double initial_temperature (const Point<dim> &position) const;
 
-            /**
-             * Return the initial temperature as a function of position.
-             */
-            virtual
-            double initial_temperature (const Point<dim> &position) const;
+        /**
+         * Declare the parameters that this class needs.
+         */
+        static
+        void declare_parameters (ParameterHandler &prm);
 
-            /**
-             * Declare the parameters that this class needs.
-             */
-            static
-            void declare_parameters (ParameterHandler &prm);
+        /**
+         * Read the parameters above from the parameter file.
+         */
+        virtual
+        void parse_parameters (ParameterHandler &prm);
 
-            /**
-             * Read the parameters above from the parameter file.
-             */
-            virtual
-            void parse_parameters (ParameterHandler &prm);
+      private:
 
-        private:
+        double isotherm_temperature;
+        double surface_temperature;
+        double temperature_gradient;
+        types::boundary_id surface_boundary_id;
 
-            double isotherm_temperature;
-            double surface_temperature;
-            double temperature_gradient;
-            types::boundary_id surface_boundary_id;
-
-        };
-    }
+    };
+  }
 }
 #endif
