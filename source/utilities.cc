@@ -972,7 +972,7 @@ namespace aspect
               cout << "in netcdf" << endl;
               int ncid, ndims, nvars, nattr;
               int latId, lonId, depthId, dvsId = 0;
-              size_t points;
+              int latDimId, lonDimId, depthDimId;
 
               std::stringstream datastream;
               std::string completeString;
@@ -981,9 +981,9 @@ namespace aspect
 
               nc_open(filename.c_str(), NC_NOWRITE, &ncid);
               nc_inq(ncid, &ndims, &nvars, &nattr, 0); //Get the number of dimensions, variabls, and attributes
-
+              
+#if 0
               //Get the size (POINTS) for each variable in the dataset and store them
-              completeString += "# POINTS: ";
               for (int i = 0; i < nvars; i++)
                 {
                   //FIXME: //Probably do not need to store the variable name or variable ID
@@ -991,6 +991,7 @@ namespace aspect
                   nc_inq_dimlen(ncid, i, &points);
                   pointsList.push_back(points);
                 }
+#endif
 
               //Search the netcdf file for variable of the corresponding name and store its ID
               nc_inq_varid(ncid, netcdfNames.getVar1().c_str(), &latId);
@@ -998,34 +999,45 @@ namespace aspect
               nc_inq_varid(ncid, netcdfNames.getVar3().c_str(), &depthId);
               nc_inq_varid(ncid, netcdfNames.getValuesVar().c_str(), &dvsId);
 
-              uint latSize;
-              uint lonSize;
-              uint depthSize;
+              //Get the dimension ID for each variable. Sometimes (such as reading from url) the varID and the dimID
+              // may be different
+              nc_inq_dimid(ncid, "latitude", &latDimId);
+              nc_inq_dimid(ncid, "longitude", &lonDimId);
+              nc_inq_dimid(ncid, "depth", &depthDimId);
 
+              size_t latSize;
+              size_t lonSize;
+              size_t depthSize;
+
+              completeString += "# POINTS: ";
               //TODO: Right now we know that there should always be three variables in the Iris data
               // with points that matter (lat, lon, depth/radius). This will need to be changed for future .nc files
               for (int i = 0; i < nvars; i++)
                 {
                   if (i == latId)
                     {
-                      latSize = pointsList[i];
-                      completeString += to_string(pointsList[i]);
+                      nc_inq_dimlen(ncid, latDimId, &latSize);
+                      completeString += to_string(latSize);
                       completeString += " ";
+                      pointsList.push_back(latSize);
                     }
                   if (i == lonId)
                     {
-                      lonSize = pointsList[i];
-                      completeString += to_string(pointsList[i]);
+                      nc_inq_dimlen(ncid, lonDimId, &lonSize);
+                      completeString += to_string(lonSize);
                       completeString += " ";
+                      pointsList.push_back(lonSize);
                     }
                   if (i == depthId)
                     {
-                      depthSize = pointsList[i];
-                      completeString += to_string(pointsList[i]);
+                      nc_inq_dimlen(ncid, depthDimId, &depthSize);
+                      completeString += to_string(depthSize);
                       completeString += " ";
+                      pointsList.push_back(depthSize);
                     }
                 }
               completeString += "\n";
+
               //Make an array that will hold the arrays of the dataset
               //This array will store the values of the single array variables (lat, lon, depth/radius)
               std::vector<std::vector<float>> datasetVars;
@@ -1037,7 +1049,7 @@ namespace aspect
               for (int i = 0; i < 3; i++)
                 {
                   //resize the vector for each variable before reading it in (netcdf will be upset otherwise)
-                  tmp.resize(pointsList[i]);
+                  tmp.resize(pointsList[i]);  //TODO: Temp fix, the resize should be the variable size
                   nc_get_var(ncid, i, &tmp[0]);   //Read entire variable data into an array
                   datasetVars.push_back(tmp);
                 }
