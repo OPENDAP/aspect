@@ -968,7 +968,6 @@ namespace aspect
           //------ NetCDF ------//
           if (filename.find(".nc") != std::string::npos)
             {
-              cout << "in netcdf" << endl;
               int ncid, ndims, nvars, nattr;
               int latId, lonId, depthId, dvsId = 0;
               int latDimId, lonDimId, depthDimId;
@@ -1008,7 +1007,6 @@ namespace aspect
               size_t lonSize;
               size_t depthSize;
 
-              completeString += "# POINTS: ";
               //TODO: Right now we know that there should always be three variables in the Iris data
               // with points that matter (lat, lon, depth/radius). This will need to be changed for future .nc files
               for (int i = 0; i < nvars; i++)
@@ -1016,27 +1014,22 @@ namespace aspect
                   if (i == latId)
                     {
                       nc_inq_dimlen(ncid, latDimId, &latSize);
-                      completeString += to_string(latSize);
-                      completeString += " ";
                       pointsList.push_back(latSize);
                     }
                   if (i == lonId)
                     {
                       nc_inq_dimlen(ncid, lonDimId, &lonSize);
-                      completeString += to_string(lonSize);
-                      completeString += " ";
                       pointsList.push_back(lonSize);
                     }
                   if (i == depthId)
                     {
                       nc_inq_dimlen(ncid, depthDimId, &depthSize);
-                      completeString += to_string(depthSize);
-                      completeString += " ";
                       pointsList.push_back(depthSize);
                     }
                 }
-              completeString += "\n";
 
+#if 0
+              //FIXME: Currently this is not needed. But it may be useful for prms that would want to read netcdf data
               //Make an array that will hold the arrays of the dataset
               //This array will store the values of the single array variables (lat, lon, depth/radius)
               std::vector<std::vector<float>> datasetVars;
@@ -1052,12 +1045,15 @@ namespace aspect
                   nc_get_var(ncid, i, &tmp[0]);   //Read entire variable data into an array
                   datasetVars.push_back(tmp);
                 }
+#endif
 
               //Array that will work as a 3 dimensional array to store the dvs values
               std::vector<float> dvs;
               dvs.resize(latSize*lonSize*depthSize);
               nc_get_var(ncid, dvsId, &dvs[0]);
 
+#if 0
+              //FIXME: Currently this is not needed. But it may be useful for prms that would want to read netcdf data
               //Loop through the single dimmension array as if it were 3D
               for (uint i = 0; i < depthSize; i++)
                 {
@@ -1073,7 +1069,7 @@ namespace aspect
                       completeString += "\n";
                     }
                 }
-
+#endif
 
               //---- Netcdf -> sph conversion ----//
               if (convert_to_sph) {
@@ -1118,9 +1114,9 @@ namespace aspect
                       depthColumns += "\n";
                   }
 
-                  cout << completeString << endl;
+                  cout << "Columns (lat, long, dvs): \n" << completeString << endl;
                   cout << endl;
-                  cout << depthColumns << endl;
+                  cout << "Depth: \n" << depthColumns << endl;
                   //completeString = sph_conversion(netcdfColumns, depth);
               }
 
@@ -1186,7 +1182,6 @@ namespace aspect
                           urlArray->value(tmp);
                           columns.push_back(tmp);
 
-                          cout << "column size: " << columns.size() << endl;
                         }
                       else
                         {
@@ -1227,7 +1222,6 @@ namespace aspect
                   urlString << " " << points[i];
                 }
               urlString << "\n";
-              cout << urlString.str() << endl;
 
               //Add the values from the arrays into the stringstream. The values are passed in
               // per row with a character return added at the end of each row.
@@ -1285,8 +1279,6 @@ namespace aspect
 
               data_string = datastream.str();
               filesize = data_string.size();
-
-              cout << data_string << endl;
             }
 
           // Distribute data_size and data across processes
@@ -2291,7 +2283,6 @@ namespace aspect
 
         convert_to_sph = prm.get_bool("Convert to sph");
 
-        cout << "test names: " << netcdfNames.getVar1() << endl;
         // Get the path to the data files. If it contains a reference
         // to $ASPECT_SOURCE_DIR, replace it by what CMake has given us
         // as a #define
