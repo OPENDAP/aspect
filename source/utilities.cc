@@ -949,7 +949,7 @@ namespace aspect
      * Store the value of the variable names for lookup inside a netcdf file.
      */
     aspect::InitialTemperature::NetcdfData netcdfNames;  //TODO: Make unique pointer
-
+    bool convert_to_sph = true; //TODO: get rid of global variable. Only here for testing
     //Added a check to read data files from a url
     //Author: Kodi Neumiller 10/9/18
     std::string
@@ -966,7 +966,6 @@ namespace aspect
 
 
           //------ NetCDF ------//
-          //kneumiller - 11/24/19
           if (filename.find(".nc") != std::string::npos)
             {
               cout << "in netcdf" << endl;
@@ -981,7 +980,7 @@ namespace aspect
 
               nc_open(filename.c_str(), NC_NOWRITE, &ncid);
               nc_inq(ncid, &ndims, &nvars, &nattr, 0); //Get the number of dimensions, variabls, and attributes
-              
+
 #if 0
               //Get the size (POINTS) for each variable in the dataset and store them
               for (int i = 0; i < nvars; i++)
@@ -1075,6 +1074,57 @@ namespace aspect
                     }
                 }
 
+
+              //---- Netcdf -> sph conversion ----//
+              if (convert_to_sph) {
+                  std::string netcdfColumns, depthColumns;
+
+                  //Get latitude data from nc file
+                  std::vector<float> latVector;
+                  latVector.resize(latSize);
+                  nc_get_var(ncid, latId, &latVector[0]);
+                  //Get longitude data from nc file
+                  std::vector<float> lonVector;
+                  lonVector.resize(lonSize);
+                  nc_get_var(ncid, lonId, &lonVector[0]);
+                  //Get depth data from nc file
+                  std::vector<float> depthVector;
+                  depthVector.resize(depthSize);
+                  nc_get_var(ncid, depthId, &depthVector[0]);
+
+                  //Loop through the single dimmension array as if it were 3D
+                  for (uint i = 0; i < depthSize; i++)
+                  {
+                      for (uint j = 0; j < latSize; j++)
+                      {
+                          for (uint k = 0; k < lonSize; k++)
+                          {
+                              completeString += to_string(latVector[k]);
+                              completeString += " ";
+                              completeString += to_string(lonVector[k]);
+                              completeString += " ";
+
+                              //Use this formula to calculate the location in the single dimension array as if it were 3D
+                              uint index = i*latSize*lonSize + j*lonSize + k;
+                              completeString += to_string(dvs[index]);
+                              completeString += "\n";
+                          }
+                      }
+                  }
+
+                  //Loop to format the depth values
+                  for (uint i = 0; i < depthSize; i++) {
+                      depthColumns += to_string(depthVector[i]);
+                      depthColumns += "\n";
+                  }
+
+                  cout << completeString << endl;
+                  cout << endl;
+                  cout << depthColumns << endl;
+                  //completeString = sph_conversion(netcdfColumns, depth);
+              }
+
+
 #if 0
               /*For adding the lat, lon, and third variable (depth/radius) value to the complete string.
               * Currently I don't think these values are used outside of this function, however, I'm leaving
@@ -1136,6 +1186,7 @@ namespace aspect
                           urlArray->value(tmp);
                           columns.push_back(tmp);
 
+                          cout << "column size: " << columns.size() << endl;
                         }
                       else
                         {
@@ -1176,6 +1227,7 @@ namespace aspect
                   urlString << " " << points[i];
                 }
               urlString << "\n";
+              cout << urlString.str() << endl;
 
               //Add the values from the arrays into the stringstream. The values are passed in
               // per row with a character return added at the end of each row.
@@ -1233,6 +1285,8 @@ namespace aspect
 
               data_string = datastream.str();
               filesize = data_string.size();
+
+              cout << data_string << endl;
             }
 
           // Distribute data_size and data across processes
@@ -2188,6 +2242,11 @@ namespace aspect
                            "Specify the name of the variable in which the 3D array "
                            "of values is stored."
                           );
+        prm.declare_entry ("Convert to sph", "false",
+                           Patterns::Bool (),
+                           "Tells Aspect whether or not the data being read in should "
+                           "be converted to the .sph format."
+                           );
         prm.declare_entry ("Data directory",
                            default_directory,
                            Patterns::DirectoryName (),
@@ -2229,6 +2288,8 @@ namespace aspect
         netcdfNames.setVar2(prm.get("Netcdf Var 2"));
         netcdfNames.setVar3(prm.get("Netcdf Var 3"));
         netcdfNames.setValuesVar(prm.get("Netcdf Values"));
+
+        convert_to_sph = prm.get_bool("Convert to sph");
 
         cout << "test names: " << netcdfNames.getVar1() << endl;
         // Get the path to the data files. If it contains a reference

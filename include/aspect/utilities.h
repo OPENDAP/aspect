@@ -393,6 +393,13 @@ namespace aspect
      */
     bool fexists(const std::string &filename);
 
+      /**
+       * Checks to see if the user is trying to use data from a url.
+       *
+       * @param filename File to check
+       */
+      bool filename_is_url(const std::string &filename);
+
     /**
      * Reads the content of the ascii file @p filename on process 0 and
      * distributes the content by MPI_Bcast to all processes. The function
@@ -408,6 +415,16 @@ namespace aspect
     std::string
     read_and_distribute_file_content(const std::string &filename,
                                      const MPI_Comm &comm);
+
+    /**
+     * Take the netcdf data and convert it to the sph format.
+     * The first parameter the method takes in should be three
+     * columns of data: latitude, longitude, velocity variations (seismic velocity).
+     * The second parameter should be a column of depth values. The columns of data
+     * should have been read in through netcdf and organized/seperated accordingly.
+     */
+     //std::string
+     //sph_conversion(std::string netcdfColumns, std::string depth);
 
     /**
      * Creates a path as if created by the shell command "mkdir -p", therefore
@@ -789,6 +806,12 @@ namespace aspect
          * then need to be passed to the appropriate location.
          */
         aspect::InitialTemperature::NetcdfData names;  //TODO: make into unique pointer
+
+        /**
+         * Tells Aspect whether or not the read in netcdf data will need to be converted
+         * to the .sph format
+         */
+        bool convert_to_sph;
     };
 
     /**
