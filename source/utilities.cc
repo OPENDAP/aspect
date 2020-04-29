@@ -17,12 +17,13 @@
   along with ASPECT; see the file LICENSE.  If not see
   <http://www.gnu.org/licenses/>.
 */
+
 #include <aspect/global.h>
 #include <aspect/utilities.h>
 #include <aspect/simulator_access.h>
 
 #ifdef HAVE_LIBDAP
-                                                                                                                        #include <D4Connect.h>
+#include <D4Connect.h>
 #include <Connect.h>
 #include <Response.h>
 #include <Array.h>
@@ -888,16 +889,6 @@ void read_netcdf_sph(const std::string &filename, std::string &data_string) {
     int latId, lonId, depthId, dvsId = 0;
     int latDimId, lonDimId, depthDimId;
 
-#if 0
-    // Not used
-    std::stringstream datastream;
-#endif
-#if 0
-    // Removed, use the data_string formal param to avoid copying the string.
-    // jhrg 4/28/20
-    std::string data_string;
-#endif
-
     std::vector<int> pointsList;
 
     nc_open(filename.c_str(), NC_NOWRITE, &ncid);
@@ -1025,9 +1016,11 @@ void read_netcdf_sph(const std::string &filename, std::string &data_string) {
         depthColumns += "\n";
     }
 
-    cout << "Columns (lat, long, dvs): \n" << data_string << endl;
-    cout << endl;
-    cout << "Depth: \n" << depthColumns << endl;
+#ifdef SPH_DEBUG
+    std::cerr << "Columns (lat, long, dvs):" << std::endl << data_string << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "Depth:" << std::endl << depthColumns << std::endl;
+#endif
     //data_string = sph_conversion(netcdfColumns, depth);
     //}
 
@@ -3135,8 +3128,9 @@ double compute_spd_factor(const double eta,
     if ((strain_rate.norm() == 0) || (dviscosities_dstrain_rate.norm() == 0))
         return 1;
 
+    //std::sqrt((deviator(strain_rate)*deviator(strain_rate))*(dviscosities_dstrain_rate*dviscosities_dstrain_rate));
     const double norm_a_b = std::sqrt((strain_rate * strain_rate) * (dviscosities_dstrain_rate *
-                                                                     dviscosities_dstrain_rate));;//std::sqrt((deviator(strain_rate)*deviator(strain_rate))*(dviscosities_dstrain_rate*dviscosities_dstrain_rate));
+                                                                     dviscosities_dstrain_rate));;
     const double contract_b_a = (dviscosities_dstrain_rate * strain_rate);
     const double one_minus_part = 1 - (contract_b_a / norm_a_b);
     const double denom = one_minus_part * one_minus_part * norm_a_b;
@@ -3491,5 +3485,5 @@ template Table<2, double> parse_input_table(const std::string &input_string,
                                             const unsigned int n_rows,
                                             const unsigned int n_columns,
                                             const std::string &property_name);
-}
-}
+}   // namespace utilities
+}   // namespace aspect
