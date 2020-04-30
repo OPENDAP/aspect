@@ -18,6 +18,9 @@
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 
+# Added to enable builds on OSX 10.13. jhrg 4/29/20
+set (CMAKE_CXX_STANDARD 14)
+
 MESSAGE(STATUS "====================================================")
 MESSAGE(STATUS "============ Configuring ASPECT ====================")
 MESSAGE(STATUS "====================================================")
