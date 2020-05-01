@@ -25,6 +25,10 @@ MESSAGE(STATUS "====================================================")
 MESSAGE(STATUS "============ Configuring ASPECT ====================")
 MESSAGE(STATUS "====================================================")
 
+# Added to build executables in contrib/opendap/sph
+# jhrg 5/1/20
+add_subdirectory(contrib/opendap/sph)
+
 # Set the name of the project and target:
 SET(TARGET "aspect")
 

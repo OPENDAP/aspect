@@ -103,7 +103,7 @@ program_mkexpmatxy(
     .status("unknown");
   //C
   //C     get normalisation
-  normylm(lmax, wnorm);
+  // FIXME normylm(lmax, wnorm);
   //C
   nread = 0;
   statement_10:
@@ -117,7 +117,7 @@ program_mkexpmatxy(
   if (fem::mod(nread, 1000) == 0) {
     write(6, "(i8,' points read')"), nread;
   }
-  ylm(xlat, xlon, lmax, y, wk1, wk2, wk3);
+  // FIXME ylm(xlat, xlon, lmax, y, wk1, wk2, wk3);
   FEM_DO_SAFE(k, 1, leny) {
     y(k) = y(k) * wnorm(k);
   }
@@ -143,7 +143,7 @@ program_mkexpmatxy(
   //C
   write(6, star), "decomposing......";
   write(22, fem::unformatted), lmax;
-  ahouse2(leny, 22, ata, d1, d2, d3, d4, d5, d6, d7, d8, eigv);
+  // FIXME(leny, 22, ata, d1, d2, d3, d4, d5, d6, d7, d8, eigv);
   //C
 }
 

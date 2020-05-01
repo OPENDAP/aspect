@@ -131,7 +131,13 @@ program_invexpandxy(
   }
   //C
   //C     normaliseer harmonics
+#if 0
   normylm(lmax, wnorm);
+#endif
+  // Replaced the above with an explicit throw because of a compiler error:
+  // cannot pass object of non-trivial type 'arr<float>' through variadic function.
+  // jhrg 5/1/20
+  throw std::runtime_error("Missing function implementation: normylm");
   FEM_DO_SAFE(i, 1, leny) {
     x(i) = x(i) * fem::dble(wnorm(i));
   }
