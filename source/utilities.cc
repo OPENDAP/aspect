@@ -77,17 +77,17 @@ namespace aspect
     {
       Table<2, T> input_table(n_rows, n_columns);
 
-      const std::vector <std::string> rows = Utilities::possibly_extend_from_1_to_N(
-                                               Utilities::split_string_list(input_string, ';'),
-                                               n_rows,
-                                               property_name);
+      const std::vector<std::string> rows = Utilities::possibly_extend_from_1_to_N(
+                                              Utilities::split_string_list(input_string, ';'),
+                                              n_rows,
+                                              property_name);
 
       for (unsigned int i = 0; i < rows.size(); ++i)
         {
-          std::vector <std::string> current_columns = Utilities::possibly_extend_from_1_to_N(
-                                                        Utilities::split_string_list(rows[i]),
-                                                        n_columns,
-                                                        property_name);
+          std::vector<std::string> current_columns = Utilities::possibly_extend_from_1_to_N(
+                                                       Utilities::split_string_list(rows[i]),
+                                                       n_columns,
+                                                       property_name);
 
           for (unsigned int j = 0; j < current_columns.size(); ++j)
             {
@@ -110,7 +110,7 @@ namespace aspect
 // for correct formatting.
       std::multimap<std::string, double>
       parse_string_to_map(const std::string &input_string,
-                          const std::vector <std::string> &list_of_keys,
+                          const std::vector<std::string> &list_of_keys,
                           const std::string &property_name)
       {
         std::multimap<std::string, double> parsed_map;
@@ -122,12 +122,12 @@ namespace aspect
                                          "|")).match(input_string))
           {
             // Split the list by comma delimited components.
-            const std::vector <std::string> field_entries = dealii::Utilities::split_string_list(input_string, ',');
+            const std::vector<std::string> field_entries = dealii::Utilities::split_string_list(input_string, ',');
 
             for (const auto &field_entry : field_entries)
               {
                 // Split each entry into string and value ( <id> : <value>)
-                std::vector <std::string> key_and_value = Utilities::split_string_list(field_entry, ':');
+                std::vector<std::string> key_and_value = Utilities::split_string_list(field_entry, ':');
 
                 // Ensure that each entry has the correct form.
                 AssertThrow(key_and_value.size() == 2,
@@ -148,7 +148,7 @@ namespace aspect
                                            + " is only allowed if there is no other "
                                            "keyword."));
 
-                    const std::vector <std::string> values = dealii::Utilities::split_string_list(key_and_value[1], '|');
+                    const std::vector<std::string> values = dealii::Utilities::split_string_list(key_and_value[1], '|');
 
                     // Assign all the values to all fields
                     for (const std::string &key: list_of_keys)
@@ -169,7 +169,7 @@ namespace aspect
                                            "Check that you have only one value for "
                                            "each field id in your list."));
 
-                    const std::vector <std::string> values = dealii::Utilities::split_string_list(key_and_value[1], '|');
+                    const std::vector<std::string> values = dealii::Utilities::split_string_list(key_and_value[1], '|');
 
                     for (const auto &value : values)
                       {
@@ -211,14 +211,14 @@ namespace aspect
 
     std::vector<double>
     parse_map_to_double_array(const std::string &input_string,
-                              const std::vector <std::string> &list_of_keys,
+                              const std::vector<std::string> &list_of_keys,
                               const bool expects_background_field,
                               const std::string &property_name,
                               const bool allow_multiple_values_per_key,
-                              std::shared_ptr <std::vector<unsigned int>> n_values_per_key,
+                              std::shared_ptr<std::vector<unsigned int>> n_values_per_key,
                               const bool allow_missing_keys)
     {
-      std::vector <std::string> field_names = list_of_keys;
+      std::vector<std::string> field_names = list_of_keys;
       if (expects_background_field)
         field_names.insert(field_names.begin(), "background");
       const unsigned int n_fields = field_names.size();
@@ -234,15 +234,16 @@ namespace aspect
         const bool store_structure = (n_values_per_key && n_values_per_key->size() == 0);
         std::vector<unsigned int> values_per_key(n_fields, 0);
 
-        if (check_structure)
-          AssertThrow(n_values_per_key->size() == n_fields,
-                      ExcMessage("When providing an expected structure for input parameter " + property_name +
-                                 " you need to provide "
-                                 +
-                                 "as many entries in the structure vector as there are input field names (+1 if there is a background field). "
-                                 + "The current structure vector has " + std::to_string(n_values_per_key->size()) +
-                                 " entries, but there are "
-                                 + std::to_string(n_fields) + " field names."));
+        if (check_structure) AssertThrow(n_values_per_key->size() == n_fields,
+                                           ExcMessage("When providing an expected structure for input parameter " +
+                                                      property_name +
+                                                      " you need to provide "
+                                                      +
+                                                      "as many entries in the structure vector as there are input field names (+1 if there is a background field). "
+                                                      + "The current structure vector has " +
+                                                      std::to_string(n_values_per_key->size()) +
+                                                      " entries, but there are "
+                                                      + std::to_string(n_fields) + " field names."));
 
         for (const std::pair<std::string, double> &key_and_value: parsed_map)
           {
@@ -279,27 +280,26 @@ namespace aspect
         unsigned int field_index = 0;
         for (const unsigned int &n_values: values_per_key)
           {
-            if (allow_multiple_values_per_key == false)
-              AssertThrow(n_values <= 1,
-                          ExcMessage("The keyword <"
-                                     + field_names[field_index]
-                                     + "> in "
-                                     + property_name
-                                     + " has multiple values, which is unexpected. "
-                                     "Check that you have only one value for "
-                                     "each field id in your list."));
+            if (allow_multiple_values_per_key == false) AssertThrow(n_values <= 1,
+                                                                      ExcMessage("The keyword <"
+                                                                                 + field_names[field_index]
+                                                                                 + "> in "
+                                                                                 + property_name
+                                                                                 +
+                                                                                 " has multiple values, which is unexpected. "
+                                                                                 "Check that you have only one value for "
+                                                                                 "each field id in your list."));
 
-            if (allow_missing_keys == false)
-              AssertThrow(n_values > 0,
-                          ExcMessage("The keyword <"
-                                     + field_names[field_index]
-                                     + "> in "
-                                     + property_name
-                                     + " is not listed, although it is expected. "
-                                     "Check that you have at least one value for "
-                                     "each field id in your list (possibly plus "
-                                     "`background` if a background field is expected "
-                                     "for this property)."));
+            if (allow_missing_keys == false) AssertThrow(n_values > 0,
+                                                           ExcMessage("The keyword <"
+                                                                      + field_names[field_index]
+                                                                      + "> in "
+                                                                      + property_name
+                                                                      + " is not listed, although it is expected. "
+                                                                      "Check that you have at least one value for "
+                                                                      "each field id in your list (possibly plus "
+                                                                      "`background` if a background field is expected "
+                                                                      "for this property)."));
 
             if (check_structure)
               {
@@ -321,7 +321,7 @@ namespace aspect
       std::vector<double> return_values;
       for (const std::string &field_name: field_names)
         {
-          const std::pair <std::multimap<std::string, double>::const_iterator,
+          const std::pair<std::multimap<std::string, double>::const_iterator,
                 std::multimap<std::string, double>::const_iterator> entry_range = parsed_map.equal_range(field_name);
 
           for (auto entry = entry_range.first; entry != entry_range.second; ++entry)
@@ -336,9 +336,9 @@ namespace aspect
          * Split the set of DoFs (typically locally owned or relevant) in @p whole_set into blocks
          * given by the @p dofs_per_block structure.
          */
-    void split_by_block(const std::vector <types::global_dof_index> &dofs_per_block,
+    void split_by_block(const std::vector<types::global_dof_index> &dofs_per_block,
                         const IndexSet &whole_set,
-                        std::vector <IndexSet> &partitioned)
+                        std::vector<IndexSet> &partitioned)
     {
       const unsigned int n_blocks = dofs_per_block.size();
       partitioned.clear();
@@ -353,12 +353,12 @@ namespace aspect
     }
 
     template<int dim>
-    std::vector <std::string>
-    expand_dimensional_variable_names(const std::vector <std::string> &var_declarations)
+    std::vector<std::string>
+    expand_dimensional_variable_names(const std::vector<std::string> &var_declarations)
     {
       std::string dim_names[3] = {"x", "y", "z"};
       char fn_split = '(', fn_end = ')';
-      std::vector <std::string> var_name_list;
+      std::vector<std::string> var_name_list;
 
       for (const auto &var_decl : var_declarations)
         {
@@ -406,7 +406,7 @@ namespace aspect
          */
     template<int dim, int spacedim>
     std::vector<unsigned char>
-    get_local_component_association(const FiniteElement <dim, spacedim> &fe,
+    get_local_component_association(const FiniteElement<dim, spacedim> &fe,
                                     const ComponentMask & /*component_mask*/)
     {
       const unsigned char invalid = static_cast<unsigned char>(-1);
@@ -436,7 +436,7 @@ namespace aspect
 
 
     template<int dim>
-    IndexSet extract_locally_active_dofs_with_component(const DoFHandler <dim> &dof_handler,
+    IndexSet extract_locally_active_dofs_with_component(const DoFHandler<dim> &dof_handler,
                                                         const ComponentMask &component_mask)
     {
       std::vector<unsigned char> local_asoc =
@@ -446,7 +446,7 @@ namespace aspect
       IndexSet ret(dof_handler.n_dofs());
 
       unsigned int dofs_per_cell = dof_handler.get_fe().dofs_per_cell;
-      std::vector <types::global_dof_index> indices(dofs_per_cell);
+      std::vector<types::global_dof_index> indices(dofs_per_cell);
       for (const auto &cell : dof_handler.active_cell_iterators())
         if (cell->is_locally_owned())
           {
@@ -465,7 +465,7 @@ namespace aspect
 
       template<int dim>
       std::array<double, dim>
-      WGS84_coordinates(const Point <dim> &position)
+      WGS84_coordinates(const Point<dim> &position)
       {
         std::array<double, dim> ecoord;
 
@@ -506,7 +506,7 @@ namespace aspect
 
       template<int dim>
       std::array<double, dim>
-      cartesian_to_spherical_coordinates(const Point <dim> &position)
+      cartesian_to_spherical_coordinates(const Point<dim> &position)
       {
         std::array<double, dim> scoord;
 
@@ -525,10 +525,10 @@ namespace aspect
       }
 
       template<int dim>
-      Point <dim>
+      Point<dim>
       spherical_to_cartesian_coordinates(const std::array<double, dim> &scoord)
       {
-        Point <dim> ccoord;
+        Point<dim> ccoord;
 
         switch (dim)
           {
@@ -601,7 +601,7 @@ namespace aspect
       template<int dim>
       Tensor<1, dim>
       spherical_to_cartesian_vector(const Tensor<1, dim> &spherical_vector,
-                                    const Point <dim> &position)
+                                    const Point<dim> &position)
       {
         Tensor<1, dim> cartesian_vector;
 
@@ -661,8 +661,7 @@ namespace aspect
           return spherical;
         else if (coordinate_system == "depth")
           return Coordinates::depth;
-        else
-          AssertThrow(false, ExcNotImplemented());
+        else AssertThrow(false, ExcNotImplemented());
 
         return Coordinates::invalid;
       }
@@ -672,7 +671,7 @@ namespace aspect
 
     template<int dim>
     bool
-    polygon_contains_point(const std::vector <Point<2>> &point_list,
+    polygon_contains_point(const std::vector<Point<2>> &point_list,
                            const dealii::Point<2> &point)
     {
       /**
@@ -772,7 +771,7 @@ namespace aspect
 
     template<int dim>
     double
-    signed_distance_to_polygon(const std::vector <Point<2>> &point_list,
+    signed_distance_to_polygon(const std::vector<Point<2>> &point_list,
                                const dealii::Point<2> &point)
     {
       // If the point lies outside polygon, we give it a negative sign,
@@ -799,7 +798,7 @@ namespace aspect
       std::vector<double> distances(n_poly_points, 1e23);
 
       // Create another polygon but with all points shifted 1 position to the right
-      std::vector <Point<2>> shifted_point_list(n_poly_points);
+      std::vector<Point<2>> shifted_point_list(n_poly_points);
       shifted_point_list[0] = point_list[n_poly_points - 1];
 
       for (unsigned int i = 0; i < n_poly_points - 1; ++i)
@@ -863,7 +862,7 @@ namespace aspect
     }
 
     template<int dim>
-    std::array<Tensor < 1, dim>,dim-1>
+    std::array<Tensor<1, dim>, dim - 1>
 
     orthogonal_vectors(const Tensor<1, dim> &v)
     {
@@ -871,7 +870,7 @@ namespace aspect
              ExcMessage("This function can not be called with a zero "
                         "input vector."));
 
-      std::array < Tensor < 1, dim >, dim - 1 > return_value;
+      std::array<Tensor<1, dim>, dim - 1> return_value;
       switch (dim)
         {
           case 2:
@@ -955,7 +954,7 @@ namespace aspect
     /**
      * Store the value of the variable names for lookup inside a netcdf file.
      */
-    aspect::InitialTemperature::NetcdfData netcdfNames;  //TODO: Make unique pointer
+    aspect::InitialTemperature::NetcdfData netcdfNames;
 
     /**
      * @brief Read SPH data from a netCDF file.
@@ -970,27 +969,13 @@ namespace aspect
      */
     void read_netcdf_sph(const std::string &filename, std::string &data_string)
     {
+
       int ncid, ndims, nvars, nattr;
-      int latId, lonId, depthId, dvsId = 0;
-      int latDimId, lonDimId, depthDimId;
-
-      std::vector<int> pointsList;
-
       nc_open(filename.c_str(), NC_NOWRITE, &ncid);
       nc_inq(ncid, &ndims, &nvars, &nattr, 0); //Get the number of dimensions, variabls, and attributes
 
-#if 0
-      //Get the size (POINTS) for each variable in the dataset and store them
-      for (int i = 0; i < nvars; i++)
-        {
-          //FIXME: //Probably do not need to store the variable name or variable ID
-          //nc_inq_var(ncid, i, &varName, 0, 0, 0, &nattr);
-          nc_inq_dimlen(ncid, i, &points);
-          pointsList.push_back(points);
-        }
-#endif
-
       //Search the netcdf file for variable of the corresponding name and store its ID
+      int latId, lonId, depthId, dvsId;
       nc_inq_varid(ncid, netcdfNames.getVar1().c_str(), &latId);
       nc_inq_varid(ncid, netcdfNames.getVar2().c_str(), &lonId);
       nc_inq_varid(ncid, netcdfNames.getVar3().c_str(), &depthId);
@@ -998,77 +983,20 @@ namespace aspect
 
       //Get the dimension ID for each variable. Sometimes (such as reading from url) the varID and the dimID
       // may be different
+      int latDimId, lonDimId, depthDimId;
       nc_inq_dimid(ncid, "latitude", &latDimId);
       nc_inq_dimid(ncid, "longitude", &lonDimId);
       nc_inq_dimid(ncid, "depth", &depthDimId);
 
-      size_t latSize;
-      size_t lonSize;
-      size_t depthSize;
-
-      //TODO: Right now we know that there should always be three variables in the Iris data
-      // with points that matter (lat, lon, depth/radius). This will need to be changed for future .nc files
-      for (int i = 0; i < nvars; i++)
-        {
-          if (i == latId)
-            {
-              nc_inq_dimlen(ncid, latDimId, &latSize);
-              pointsList.push_back(latSize);
-            }
-          if (i == lonId)
-            {
-              nc_inq_dimlen(ncid, lonDimId, &lonSize);
-              pointsList.push_back(lonSize);
-            }
-          if (i == depthId)
-            {
-              nc_inq_dimlen(ncid, depthDimId, &depthSize);
-              pointsList.push_back(depthSize);
-            }
-        }
-
-#if 0
-      //FIXME: Currently this is not needed. But it may be useful for prms that would want to read netcdf data
-      //Make an array that will hold the arrays of the dataset
-      //This array will store the values of the single array variables (lat, lon, depth/radius)
-      std::vector <std::vector<float>> datasetVars;
-
-      //Temporary vector to hold the values of each variable array before it's pushed into datasetVars
-      std::vector<float> tmp;
-
-      //Loop through and store the values of each variable into its own array
-      for (int i = 0; i < 3; i++)
-        {
-          //resize the vector for each variable before reading it in (netcdf will be upset otherwise)
-          tmp.resize(pointsList[i]);  //TODO: Temp fix, the resize should be the variable size
-          nc_get_var(ncid, i, &tmp[0]);   //Read entire variable data into an array
-          datasetVars.push_back(tmp);
-        }
-#endif
+      size_t latSize, lonSize, depthSize;
+      nc_inq_dimlen(ncid, latDimId, &latSize);
+      nc_inq_dimlen(ncid, lonDimId, &lonSize);
+      nc_inq_dimlen(ncid, depthDimId, &depthSize);
 
       //Array that will work as a 3 dimensional array to store the dvs values
       std::vector<float> dvs;
       dvs.resize(latSize * lonSize * depthSize);
       nc_get_var(ncid, dvsId, &dvs[0]);
-
-#if 0
-      //FIXME: Currently this is not needed. But it may be useful for prms that would want to read netcdf data
-      //Loop through the single dimmension array as if it were 3D
-      for (uint i = 0; i < depthSize; i++)
-        {
-          for (uint j = 0; j < latSize; j++)
-            {
-              for (uint k = 0; k < lonSize; k++)
-                {
-                  //Use this formula to calculate the location in the single dimension array as if it were 3D
-                  uint index = i * latSize * lonSize + j * lonSize + k;
-                  data_string += to_string(dvs[index]);
-                  data_string += " ";
-                }
-              data_string += "\n";
-            }
-        }
-#endif
 
       //---- Netcdf -> sph conversion ----//
       // if (convert_to_sph) {
@@ -1115,30 +1043,11 @@ namespace aspect
         }
 
 #ifdef SPH_DEBUG
-    std::cerr << "Columns (lat, long, dvs):" << std::endl << data_string << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "Depth:" << std::endl << depthColumns << std::endl;
+      std::cerr << "Columns (lat, long, dvs):" << std::endl << data_string << std::endl;
+      std::cerr << std::endl;
+      std::cerr << "Depth:" << std::endl << depthColumns << std::endl;
 #endif
-    //data_string = sph_conversion(netcdfColumns, depth);
-    //}
-
-#if 0
-      /* For adding the lat, lon, and third variable (depth/radius) value to the complete string.
-       * Currently I don't think these values are used outside of this function, however, I'm leaving
-       * the code inside an #if/#endif statement in case the values are found to be needed.
-       */
-
-      //Add the values to the string sequentially from each array
-      for (int i = 0; i < rows; i++)
-        {
-          for (int j = 0; j < datasetVars.size(); j++)
-            {
-              data_string += to_string(datasetVars[j][i]);
-              data_string += " ";
-            }
-          data_string += "\n";
-        }
-#endif
+      //data_string = sph_conversion(netcdfColumns, depth);
     }
 
 //Added a check to read data files from a url
@@ -1535,11 +1444,11 @@ namespace aspect
           /**
                  * diagonal and off-diagonals above
                  */
-          std::vector <std::vector<double>> m_upper;
+          std::vector<std::vector<double>> m_upper;
           /**
                  * diagonals below the diagonal
                  */
-          std::vector <std::vector<double>> m_lower;
+          std::vector<std::vector<double>> m_lower;
       };
 
       band_matrix::band_matrix(int dim, int n_u, int n_l)
@@ -1878,9 +1787,9 @@ namespace aspect
     }
 
     bool
-    has_unique_entries(const std::vector <std::string> &strings)
+    has_unique_entries(const std::vector<std::string> &strings)
     {
-      const std::set <std::string> set_of_strings(strings.begin(), strings.end());
+      const std::set<std::string> set_of_strings(strings.begin(), strings.end());
       return (set_of_strings.size() == strings.size());
     }
 
@@ -1906,7 +1815,7 @@ namespace aspect
 
 
     template<int dim>
-    std::vector <std::string>
+    std::vector<std::string>
     AsciiDataLookup<dim>::get_column_names() const
     {
       return data_component_names;
@@ -1979,12 +1888,11 @@ namespace aspect
 
                   if (table_points[i] == 0)
                     table_points[i] = temp_index;
-                  else
-                    AssertThrow(table_points[i] == temp_index,
-                                ExcMessage("The file grid must not change over model runtime. "
-                                           "Either you prescribed a conflicting number of points in "
-                                           "the input file, or the POINTS comment in your data files "
-                                           "is changing between following files."));
+                  else AssertThrow(table_points[i] == temp_index,
+                                     ExcMessage("The file grid must not change over model runtime. "
+                                                "Either you prescribed a conflicting number of points in "
+                                                "the input file, or the POINTS comment in your data files "
+                                                "is changing between following files."));
                 }
         }
 
@@ -2024,13 +1932,13 @@ namespace aspect
               // the constructor of this class.
               if (components == numbers::invalid_unsigned_int)
                 components = name_column_index - dim;
-              else if (name_column_index != 0)
-                AssertThrow(components == name_column_index,
-                            ExcMessage("The number of expected data columns and the "
-                                       "list of column names at the beginning of the data file "
-                                       + filename + " do not match. The file should contain "
-                                       "one column name per column (one for each dimension "
-                                       "and one per data column)."));
+              else if (name_column_index != 0) AssertThrow(components == name_column_index,
+                                                             ExcMessage("The number of expected data columns and the "
+                                                                        "list of column names at the beginning of the data file "
+                                                                        + filename +
+                                                                        " do not match. The file should contain "
+                                                                        "one column name per column (one for each dimension "
+                                                                        "and one per data column)."));
 
               break;
             }
@@ -2065,7 +1973,7 @@ namespace aspect
       maximum_component_value.resize(components, -std::numeric_limits<double>::max());
       Table<dim, double> data_table;
       data_table.TableBase<dim, double>::reinit(table_points);
-      std::vector <Table<dim, double>> data_tables(components + dim, data_table);
+      std::vector<Table<dim, double>> data_tables(components + dim, data_table);
 
 
       // Read data lines
@@ -2122,7 +2030,7 @@ namespace aspect
         {
           table_intervals[i] = table_points[i] - 1;
 
-          TableIndices <dim> idx;
+          TableIndices<dim> idx;
           double temp_coord = data_tables[i](idx);
           double new_temp_coord = 0;
 
@@ -2174,20 +2082,20 @@ namespace aspect
         {
           if (coordinate_values_are_equidistant)
             data[i]
-              = std_cxx14::make_unique < Functions::InterpolatedUniformGridData < dim >> (grid_extent,
-                                                                                          table_intervals,
-                                                                                          data_tables[dim + i]);
+              = std_cxx14::make_unique<Functions::InterpolatedUniformGridData<dim >>(grid_extent,
+                                                                                     table_intervals,
+                                                                                     data_tables[dim + i]);
           else
             data[i]
-              = std_cxx14::make_unique < Functions::InterpolatedTensorProductGridData < dim >> (coordinate_values,
-                  data_tables[dim + i]);
+              = std_cxx14::make_unique<Functions::InterpolatedTensorProductGridData<dim >>(coordinate_values,
+                                                                                           data_tables[dim + i]);
         }
     }
 
 
     template<int dim>
     double
-    AsciiDataLookup<dim>::get_data(const Point <dim> &position,
+    AsciiDataLookup<dim>::get_data(const Point<dim> &position,
                                    const unsigned int component) const
     {
       Assert(component < components, ExcMessage("Invalid component index"));
@@ -2196,7 +2104,7 @@ namespace aspect
 
     template<int dim>
     Tensor<1, dim>
-    AsciiDataLookup<dim>::get_gradients(const Point <dim> &position,
+    AsciiDataLookup<dim>::get_gradients(const Point<dim> &position,
                                         const unsigned int component)
     {
       return data[component]->gradient(position, component);
@@ -2204,10 +2112,10 @@ namespace aspect
 
 
     template<int dim>
-    TableIndices <dim>
+    TableIndices<dim>
     AsciiDataLookup<dim>::compute_table_indices(const unsigned int i) const
     {
-      TableIndices <dim> idx;
+      TableIndices<dim> idx;
       idx[0] = (i / (components + dim)) % table_points[0];
       if (dim >= 2)
         idx[1] = ((i / (components + dim)) / table_points[0]) % table_points[1];
@@ -2327,15 +2235,15 @@ namespace aspect
 
     template<int dim>
     void
-    AsciiDataBoundary<dim>::initialize(const std::set <types::boundary_id> &boundary_ids,
+    AsciiDataBoundary<dim>::initialize(const std::set<types::boundary_id> &boundary_ids,
                                        const unsigned int components)
     {
-      AssertThrow((Plugins::plugin_type_matches<const GeometryModel::SphericalShell <dim>>(this->get_geometry_model()))
-                  || (Plugins::plugin_type_matches<const GeometryModel::Chunk <dim>>(this->get_geometry_model()))
-                  || (Plugins::plugin_type_matches<const GeometryModel::Sphere <dim>>(this->get_geometry_model()))
-                  || (Plugins::plugin_type_matches<const GeometryModel::Box <dim>>(this->get_geometry_model()))
+      AssertThrow((Plugins::plugin_type_matches<const GeometryModel::SphericalShell<dim>>(this->get_geometry_model()))
+                  || (Plugins::plugin_type_matches<const GeometryModel::Chunk<dim>>(this->get_geometry_model()))
+                  || (Plugins::plugin_type_matches<const GeometryModel::Sphere<dim>>(this->get_geometry_model()))
+                  || (Plugins::plugin_type_matches<const GeometryModel::Box<dim>>(this->get_geometry_model()))
                   ||
-                  (Plugins::plugin_type_matches<const GeometryModel::TwoMergedBoxes <dim>>(this->get_geometry_model())),
+                  (Plugins::plugin_type_matches<const GeometryModel::TwoMergedBoxes<dim>>(this->get_geometry_model())),
                   ExcMessage("This ascii data plugin can only be used when using "
                              "a spherical shell, chunk or box geometry."));
 
@@ -2406,7 +2314,7 @@ namespace aspect
     std::array<unsigned int, dim - 1>
     AsciiDataBoundary<dim>::get_boundary_dimensions(const types::boundary_id boundary_id) const
     {
-      std::array < unsigned int, dim - 1 > boundary_dimensions;
+      std::array<unsigned int, dim - 1> boundary_dimensions;
 
       switch (dim)
         {
@@ -2652,13 +2560,13 @@ namespace aspect
     double
     AsciiDataBoundary<dim>::
     get_data_component(const types::boundary_id boundary_indicator,
-                       const Point <dim> &position,
+                       const Point<dim> &position,
                        const unsigned int component) const
     {
       // For initial ascii data topography, we need access to the data before get_time() is set,
       // as this is when the grid including topography is constructed for the chunk geometry.
-      if ((dynamic_cast<const GeometryModel::Chunk <dim> *>(&this->get_geometry_model()) != nullptr &&
-           dynamic_cast<const InitialTopographyModel::AsciiData <dim> *>(&this->get_initial_topography_model()) !=
+      if ((dynamic_cast<const GeometryModel::Chunk<dim> *>(&this->get_geometry_model()) != nullptr &&
+           dynamic_cast<const InitialTopographyModel::AsciiData<dim> *>(&this->get_initial_topography_model()) !=
            nullptr &&
            this->get_timestep_number() == numbers::invalid_unsigned_int) ||
           this->get_time() - first_data_file_model_time >= 0.0)
@@ -2666,12 +2574,12 @@ namespace aspect
           const std::array<double, dim> natural_position = this->get_geometry_model().cartesian_to_natural_coordinates(
                                                              position);
 
-          Point <dim> internal_position;
+          Point<dim> internal_position;
           for (unsigned int i = 0; i < dim; i++)
             internal_position[i] = natural_position[i];
 
           // The chunk model has latitude as natural coordinate. We need to convert this to colatitude
-          if (Plugins::plugin_type_matches<const GeometryModel::Chunk <dim>>(this->get_geometry_model()) && dim == 3)
+          if (Plugins::plugin_type_matches<const GeometryModel::Chunk<dim>>(this->get_geometry_model()) && dim == 3)
             {
               internal_position[2] = numbers::PI / 2. - internal_position[2];
             }
@@ -2679,7 +2587,7 @@ namespace aspect
           const std::array<unsigned int, dim - 1> boundary_dimensions =
             get_boundary_dimensions(boundary_indicator);
 
-          Point < dim - 1 > data_position;
+          Point<dim - 1> data_position;
           for (unsigned int i = 0; i < dim - 1; i++)
             data_position[i] = internal_position[boundary_dimensions[i]];
 
@@ -2700,13 +2608,13 @@ namespace aspect
     template<int dim>
     Tensor<1, dim - 1>
     AsciiDataBoundary<dim>::vector_gradient(const types::boundary_id boundary_indicator,
-                                            const Point <dim> &position,
+                                            const Point<dim> &position,
                                             const unsigned int component) const
     {
       // For initial ascii data topography, we need access to the data before get_time() is set,
       // as this is when the grid including topography is constructed for the chunk geometry.
-      if ((dynamic_cast<const GeometryModel::Chunk <dim> *>(&this->get_geometry_model()) != nullptr &&
-           dynamic_cast<const InitialTopographyModel::AsciiData <dim> *>(&this->get_initial_topography_model()) !=
+      if ((dynamic_cast<const GeometryModel::Chunk<dim> *>(&this->get_geometry_model()) != nullptr &&
+           dynamic_cast<const InitialTopographyModel::AsciiData<dim> *>(&this->get_initial_topography_model()) !=
            nullptr &&
            this->get_timestep_number() == numbers::invalid_unsigned_int) ||
           this->get_time() - first_data_file_model_time >= 0.0)
@@ -2714,12 +2622,12 @@ namespace aspect
           const std::array<double, dim> natural_position = this->get_geometry_model().cartesian_to_natural_coordinates(
                                                              position);
 
-          Point <dim> internal_position;
+          Point<dim> internal_position;
           for (unsigned int i = 0; i < dim; i++)
             internal_position[i] = natural_position[i];
 
           // The chunk model has latitude as natural coordinate. We need to convert this to colatitude
-          if (dynamic_cast<const GeometryModel::Chunk <dim> *> (&this->get_geometry_model()) != nullptr && dim == 3)
+          if (dynamic_cast<const GeometryModel::Chunk<dim> *> (&this->get_geometry_model()) != nullptr && dim == 3)
             {
               internal_position[2] = numbers::PI / 2. - internal_position[2];
             }
@@ -2727,7 +2635,7 @@ namespace aspect
           const std::array<unsigned int, dim - 1> boundary_dimensions =
             get_boundary_dimensions(boundary_indicator);
 
-          Point < dim - 1 > data_position;
+          Point<dim - 1> data_position;
           for (unsigned int i = 0; i < dim - 1; ++i)
             data_position[i] = internal_position[boundary_dimensions[i]];
 
@@ -2832,10 +2740,10 @@ namespace aspect
     void
     AsciiDataLayered<dim>::initialize(const unsigned int components)
     {
-      AssertThrow((Plugins::plugin_type_matches < GeometryModel::SphericalShell < dim > > (this->get_geometry_model()) ||
-                   Plugins::plugin_type_matches < GeometryModel::Chunk < dim > > (this->get_geometry_model()) ||
-                   Plugins::plugin_type_matches < GeometryModel::Sphere < dim > > (this->get_geometry_model()) ||
-                   Plugins::plugin_type_matches < GeometryModel::Box < dim > > (this->get_geometry_model())),
+      AssertThrow((Plugins::plugin_type_matches<GeometryModel::SphericalShell<dim> >(this->get_geometry_model()) ||
+                   Plugins::plugin_type_matches<GeometryModel::Chunk<dim> >(this->get_geometry_model()) ||
+                   Plugins::plugin_type_matches<GeometryModel::Sphere<dim> >(this->get_geometry_model()) ||
+                   Plugins::plugin_type_matches<GeometryModel::Box<dim> >(this->get_geometry_model())),
                   ExcMessage("This ascii data plugin can only be used when using "
                              "a spherical shell, chunk, sphere or box geometry."));
 
@@ -2861,26 +2769,26 @@ namespace aspect
     template<int dim>
     double
     AsciiDataLayered<dim>::
-    get_data_component(const Point <dim> &position,
+    get_data_component(const Point<dim> &position,
                        const unsigned int component) const
     {
       // Get the location of the component in the coordinate system of the ascii data input
       const std::array<double, dim> natural_position = this->get_geometry_model().cartesian_to_natural_coordinates(
                                                          position);
 
-      Point <dim> internal_position;
+      Point<dim> internal_position;
       for (unsigned int i = 0; i < dim; i++)
         internal_position[i] = natural_position[i];
 
       // The chunk model has latitude as natural coordinate. We need to convert this to colatitude
-      if (Plugins::plugin_type_matches < GeometryModel::Chunk < dim > > (this->get_geometry_model()) && dim == 3)
+      if (Plugins::plugin_type_matches<GeometryModel::Chunk<dim> >(this->get_geometry_model()) && dim == 3)
         {
           internal_position[2] = numbers::PI / 2. - internal_position[2];
         }
 
       double vertical_position;
-      Point < dim - 1 > horizontal_position;
-      if (Plugins::plugin_type_matches < GeometryModel::Box < dim > > (this->get_geometry_model()))
+      Point<dim - 1> horizontal_position;
+      if (Plugins::plugin_type_matches<GeometryModel::Box<dim> >(this->get_geometry_model()))
         {
           // in cartesian coordinates, the vertical component comes last
           vertical_position = internal_position[dim - 1];
@@ -3001,12 +2909,12 @@ namespace aspect
     void
     AsciiDataInitial<dim>::initialize(const unsigned int components)
     {
-      AssertThrow((Plugins::plugin_type_matches<const GeometryModel::SphericalShell <dim>>(this->get_geometry_model()))
-                  || (Plugins::plugin_type_matches<const GeometryModel::Chunk <dim>>(this->get_geometry_model()))
-                  || (Plugins::plugin_type_matches<const GeometryModel::Sphere <dim>>(this->get_geometry_model()))
-                  || (Plugins::plugin_type_matches<const GeometryModel::Box <dim>>(this->get_geometry_model()))
+      AssertThrow((Plugins::plugin_type_matches<const GeometryModel::SphericalShell<dim>>(this->get_geometry_model()))
+                  || (Plugins::plugin_type_matches<const GeometryModel::Chunk<dim>>(this->get_geometry_model()))
+                  || (Plugins::plugin_type_matches<const GeometryModel::Sphere<dim>>(this->get_geometry_model()))
+                  || (Plugins::plugin_type_matches<const GeometryModel::Box<dim>>(this->get_geometry_model()))
                   ||
-                  (Plugins::plugin_type_matches<const GeometryModel::TwoMergedBoxes <dim>>(this->get_geometry_model())),
+                  (Plugins::plugin_type_matches<const GeometryModel::TwoMergedBoxes<dim>>(this->get_geometry_model())),
                   ExcMessage("This ascii data plugin can only be used when using "
                              "a spherical shell, chunk, or box geometry."));
 
@@ -3033,13 +2941,13 @@ namespace aspect
     template<int dim>
     double
     AsciiDataInitial<dim>::
-    get_data_component(const Point <dim> &position,
+    get_data_component(const Point<dim> &position,
                        const unsigned int component) const
     {
-      Point <dim> internal_position = position;
+      Point<dim> internal_position = position;
 
-      if (Plugins::plugin_type_matches<const GeometryModel::SphericalShell <dim>>(this->get_geometry_model())
-          || (Plugins::plugin_type_matches<const GeometryModel::Chunk <dim>>(this->get_geometry_model())))
+      if (Plugins::plugin_type_matches<const GeometryModel::SphericalShell<dim>>(this->get_geometry_model())
+          || (Plugins::plugin_type_matches<const GeometryModel::Chunk<dim>>(this->get_geometry_model())))
         {
           const std::array<double, dim> spherical_position =
             Utilities::Coordinates::cartesian_to_spherical_coordinates(position);
@@ -3075,7 +2983,7 @@ namespace aspect
 
 
     template<int dim>
-    std::vector <std::string>
+    std::vector<std::string>
     AsciiDataProfile<dim>::get_column_names() const
     {
       return lookup->get_column_names();
@@ -3277,7 +3185,7 @@ namespace aspect
     derivative_of_weighted_p_norm_average(const double /*averaged_parameter*/,
                                           const std::vector<double> &weights,
                                           const std::vector<double> &values,
-                                          const std::vector <T> &derivatives,
+                                          const std::vector<T> &derivatives,
                                           const double p)
     {
       // TODO: use averaged_parameter to speed up computation?
@@ -3433,12 +3341,12 @@ namespace aspect
       if ((strain_rate.norm() == 0) || (dviscosities_dstrain_rate.norm() == 0))
         return 1;
 
-    //std::sqrt((deviator(strain_rate)*deviator(strain_rate))*(dviscosities_dstrain_rate*dviscosities_dstrain_rate));
-    const double norm_a_b = std::sqrt((strain_rate * strain_rate) * (dviscosities_dstrain_rate *
-                                                                     dviscosities_dstrain_rate));;
-    const double contract_b_a = (dviscosities_dstrain_rate * strain_rate);
-    const double one_minus_part = 1 - (contract_b_a / norm_a_b);
-    const double denom = one_minus_part * one_minus_part * norm_a_b;
+      //std::sqrt((deviator(strain_rate)*deviator(strain_rate))*(dviscosities_dstrain_rate*dviscosities_dstrain_rate));
+      const double norm_a_b = std::sqrt((strain_rate * strain_rate) * (dviscosities_dstrain_rate *
+                                                                       dviscosities_dstrain_rate));;
+      const double contract_b_a = (dviscosities_dstrain_rate * strain_rate);
+      const double one_minus_part = 1 - (contract_b_a / norm_a_b);
+      const double denom = one_minus_part * one_minus_part * norm_a_b;
 
       // the case denom == 0 (smallest eigenvalue is zero), should return one,
       // and it does here, because C_safety * 2.0 * eta is always larger then zero.
@@ -3450,9 +3358,9 @@ namespace aspect
 
 
     template<int dim>
-    Point <dim> convert_array_to_point(const std::array<double, dim> &array)
+    Point<dim> convert_array_to_point(const std::array<double, dim> &array)
     {
-      Point <dim> point;
+      Point<dim> point;
       for (unsigned int i = 0; i < dim; i++)
         point[i] = array[i];
 
@@ -3461,7 +3369,7 @@ namespace aspect
 
 
     template<int dim>
-    std::array<double, dim> convert_point_to_array(const Point <dim> &point)
+    std::array<double, dim> convert_point_to_array(const Point<dim> &point)
     {
       std::array<double, dim> array;
       for (unsigned int i = 0; i < dim; i++)
@@ -3525,9 +3433,9 @@ namespace aspect
     }
 
 
-    std::vector <Operator> create_model_operator_list(const std::vector <std::string> &operator_names)
+    std::vector<Operator> create_model_operator_list(const std::vector<std::string> &operator_names)
     {
-      std::vector <Operator> operator_list(operator_names.size());
+      std::vector<Operator> operator_list(operator_names.size());
       for (unsigned int i = 0; i < operator_names.size(); ++i)
         {
           // create operator list
@@ -3541,11 +3449,10 @@ namespace aspect
             operator_list[i] = Operator(Operator::maximum);
           else if (operator_names[i] == "replace if valid")
             operator_list[i] = Operator(Operator::replace_if_valid);
-          else
-            AssertThrow(false,
-                        ExcMessage("ASPECT only accepts the following operators: "
-                                   "add, subtract, minimum, maximum, and replace if valid. But your parameter file "
-                                   "contains: " + operator_names[i] + ". Please check your parameter file."));
+          else AssertThrow(false,
+                             ExcMessage("ASPECT only accepts the following operators: "
+                                        "add, subtract, minimum, maximum, and replace if valid. But your parameter file "
+                                        "contains: " + operator_names[i] + ". Please check your parameter file."));
         }
 
       return operator_list;
@@ -3574,8 +3481,8 @@ namespace aspect
     }
 
     template<int dim>
-    NaturalCoordinate<dim>::NaturalCoordinate(Point <dim> &position,
-                                              const GeometryModel::Interface <dim> &geometry_model)
+    NaturalCoordinate<dim>::NaturalCoordinate(Point<dim> &position,
+                                              const GeometryModel::Interface<dim> &geometry_model)
     {
       coordinate_system = geometry_model.natural_coordinate_system();
       coordinates = geometry_model.cartesian_to_natural_coordinates(position);
@@ -3746,13 +3653,13 @@ namespace aspect
 
     template std::array<double, 3> Coordinates::WGS84_coordinates<3>(const Point<3> &position);
 
-    template bool polygon_contains_point<2>(const std::vector <Point<2>> &pointList, const dealii::Point<2> &point);
+    template bool polygon_contains_point<2>(const std::vector<Point<2>> &pointList, const dealii::Point<2> &point);
 
-    template bool polygon_contains_point<3>(const std::vector <Point<2>> &pointList, const dealii::Point<2> &point);
+    template bool polygon_contains_point<3>(const std::vector<Point<2>> &pointList, const dealii::Point<2> &point);
 
-    template double signed_distance_to_polygon<2>(const std::vector <Point<2>> &pointList, const dealii::Point<2> &point);
+    template double signed_distance_to_polygon<2>(const std::vector<Point<2>> &pointList, const dealii::Point<2> &point);
 
-    template double signed_distance_to_polygon<3>(const std::vector <Point<2>> &pointList, const dealii::Point<2> &point);
+    template double signed_distance_to_polygon<3>(const std::vector<Point<2>> &pointList, const dealii::Point<2> &point);
 
 
     template std::array<Tensor<1, 2>, 1> orthogonal_vectors(const Tensor<1, 2> &v);
@@ -3770,14 +3677,14 @@ namespace aspect
     derivative_of_weighted_p_norm_average(const double averaged_parameter,
                                           const std::vector<double> &weights,
                                           const std::vector<double> &values,
-                                          const std::vector <dealii::SymmetricTensor<2, 2, double>> &derivatives,
+                                          const std::vector<dealii::SymmetricTensor<2, 2, double>> &derivatives,
                                           const double p);
 
     template dealii::SymmetricTensor<2, 3, double>
     derivative_of_weighted_p_norm_average(const double averaged_parameter,
                                           const std::vector<double> &weights,
                                           const std::vector<double> &values,
-                                          const std::vector <dealii::SymmetricTensor<2, 3, double>> &derivatives,
+                                          const std::vector<dealii::SymmetricTensor<2, 3, double>> &derivatives,
                                           const double p);
 
     template double compute_spd_factor(const double eta,
@@ -3809,10 +3716,9 @@ namespace aspect
     class NaturalCoordinate<3>;
 
 
-
-template Table<2, double> parse_input_table(const std::string &input_string,
-                                            const unsigned int n_rows,
-                                            const unsigned int n_columns,
-                                            const std::string &property_name);
-}   // namespace utilities
+    template Table<2, double> parse_input_table(const std::string &input_string,
+                                                const unsigned int n_rows,
+                                                const unsigned int n_columns,
+                                                const std::string &property_name);
+  }   // namespace utilities
 }   // namespace aspect
