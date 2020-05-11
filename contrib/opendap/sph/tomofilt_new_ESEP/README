@@ -1,0 +1,31 @@
+
+# May 2020
+
+This describes changes to the TOMOFILT ESEP package OPeNDAP got from
+Sarah Stamps in early 2020. The original documentation is in the
+readme_ESEP_new document. The authors of the software are:
+
+Paula Koelemeijer
+pjkoelemeijer@cantab.net
+
+Jeroen Ritsema
+jritsema@umich.edu
+
+Changes to teh TOMOFILT ESEP software were made by OPeNDAP (Kodi Neumiller
+<kneumiller@opendap.org> and James Gallagher <jgallagher@opednap.org>) so
+that only the code used for pre-processing data in netCDF files and served
+by OPeNDAP servers was built. We also added 'clean' targets to make it
+easier to see which files were built by the code and which are static inputs
+or examples.
+
+To run the programs here, you will need data files for teh 'utils' directory.
+Get those from http://www.opendap.org/pub/BALTO/tomofilt_new_ESEP_utils.tar.bz2.
+Download the tar file and expand that here. It will make the 'utils' directory
+and put the data files inside it. Some of the data files are too large to
+push to GitHub, hence the tar file.
+
+The top-level Makefile can be used to build and clean the software.
+
+Use 'make all' to build the code, 'make clean' to remove gnerated data,
+'make libclean' to remove the static libraries and 'make reallyclean'
+to remove the built binaries.

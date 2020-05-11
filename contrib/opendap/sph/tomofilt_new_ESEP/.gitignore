@@ -1,0 +1,12 @@
+
+# Parts of the sph encoder that should not be in git.
+# jhrg 5/7/20
+
+# Get the utils data files from https://www.opendap.org/pub/BALTO.
+# The data files are too large for GitHub (> 100MB).
+
+/contrib/opendap/sph/tomofilt_new_ESEP/utils/
+
+/contrib/opendap/sph/tomofilt_new_ESEP/lib/*.a
+/contrib/opendap/sph/tomofilt_new_ESEP/bin/*
+/contrib/opendap/sph/tomofilt_new_ESEP/geodyn/examplemodel/

@@ -1,0 +1,212 @@
+# October 2018
+
+Script to reparametrise and tomographically filter a geodynamic model 
+using the SP12RTS resolution operator for both Vs and Vp structure. 
+see Koelemeijer et al., 2016 for details regarding the model
+and Koelemeijer et al., 2018 for details regarding the joint resolution operator, 
+based on the work of Ritsema et al., 2007. 
+
+You can filter your model for both the S-wave and P-wave velocity
+structure using the operator of SP12RTS up to degree 12.
+Additional model files are made available that have different data weighting. 
+This allows to investigate the ratios and correlations of seismic velocities
+depending on the input data.
+
+"dofilt_ESEP" is a bash script that filters both S- and P-wave structure. 
+This script will give a reparametrised model file in the 
+".sph" format, starting with "inpm".
+The parametrisation consists of 21 clamped cubic splines in depth
+and spherical harmonics up to the specified degree in the lateral
+direction. 
+The script will also give a tomographically filtered model ".sph" file, 
+starting with "oupm", where the resolution operator has been applied.
+These ".sph" files can then be processed and plotted using 
+the S20RTS/S40RTS plotting scripts available on the website
+of Jeroen Ritsema:
+http://www.earth.lsa.umich.edu/~jritsema/S20RTS_plotting.tar.gz
+Newer versions for both GMT4 and GMT5 are available on the website of Paula Koelemeijer:
+https://www.earth.ox.ac.uk/~univ4152/files/SP12RTS_plotting.tar.gz
+https://www.earth.ox.ac.uk/~univ4152/files/SP12RTS_plotting_GMT5.tar.gz
+
+New in this script (compared to February 2016) is that the ".sph" files 
+are automatically processed and expanded to give generate slices 
+through the reparameterised ("inpm") and filtered ("oupm") models. 
+In addition, the correlation between these and the tomographic model 
+is calculated automatically, as well as their RMS power spectra. 
+
+------------------------------------------------------
+Startup
+------------------------------------------------------
+
+The script uses some programs from the source directory, as described in
+the "dofilt_ESEP" script with plenty of comment-statements.
+
+Therefore, before running the "dofilt_ESEP" script, you must:
+
+(1) Define the global environment TOMOFILT that points to the location
+of the installation directory: 
+For Bash: add the line:
+" export TOMOFILT=installation-directory" 
+to your .bashrc
+For C-shell, add the line:
+ "setenv TOMOFILT installation-directory"
+to your .cshrc
+(Type "echo $SHELL" to find out which shell you are running.)
+e.g. if everything is in: /home/paula/For_others/tomofilt 
+define TOMOFILT=/home/paula/For_others/tomofilt
+
+(2) Compile the libraries:
+Go to "lib" and for each library (libgeo, libHJVH, libSphFunc)
+go into the directory and run "make"
+This should create the archive files: "lib/libgeo.a" etc.
+
+(3) Compile the source codes
+Go to "src" and run "make all"
+A total of 8 executables should have been created in "bin".
+
+You're now ready to go! 
+
+------------------------------------------------------
+Input
+------------------------------------------------------
+
+The filtering script firstly reparametrises a given input model to the
+same parametrisation as S20RTS/S40RTS/S12RTS/SP12RTS.
+The input model must therefore be evaluated in slices at specified depths
+in the mantle, present in the directory "geodyn". 
+
+For now, the structure is as follows: 
+In the "geodyn" directory, there should be a subdirectory with the "model" 
+name of the input model. 
+Within this subdirectory, there should be slices of the input model at 
+specified depths, according to the format:
+"name".dvs.layer."num".dat
+"name".dvp.layer."num".dat
+where "name" can be the name of the model run and "num" gives the number of
+the slice in a three-digit format, e.g. 001, 010, 100. 
+A particular model slice is then given as:
+geodyn/"model"/"name".dvs.layer."num".dat
+where the different columns should be values of:
+longitude latitude velocity variations (in fractions)
+
+The depth intervals which these slices represent must be specified in the file:
+geodyn/"model"/depth_layers.dat
+The slice with "num" represents the interval between depth=NR and depth=NR+1
+e.g. slice number 001 represents the model between depths on line 1 and 2,
+and has for example been evaluated at the midpoint between depth1 and depth2.
+Therefore, the number of depths specified should be 1 more than the
+number of evaluated model slices. 
+The specified depth should not be larger than 2890 (e.g. the CMB). 
+
+Examples of geodynamic model input slices are given in the directory:
+geodyn/model with names:
+name.dvp.layer.001.dat to name.dvp.layer.058.dat
+name.dvs.layer.001.dat to name.dvs.layer.058.dat
+
+------------------------------------------------------
+S- and P-wave structure filtering
+------------------------------------------------------
+
+Filtering for S-wave and P-wave velocity structure using the model
+SP12RTS up to degree 12. 
+The filtering scripts need a few inputs on the command line:
+
+prompt> ./dofilt_ESEP "model" "name" "firstlay" "lastlay"
+
+where:
+- "model" is the name of the subdirectory in geodyn
+- "name" is the name of the slice files, preceding ".dvs.layer.num.dat"
+and ".dvp.layer.num.dat"
+- "firstlayer" is the first layer below the crust, likely to be 1
+- "lastlayer" is the last layer above the CMB, effectively 1 more 
+than the number of layers
+
+For example (using the files present): 
+prompt> ./dofilt_ESEP model name 1 58
+
+The outputted ".sph" and ".spt" files will be called:
+inpm.SP12."name".repar.spt
+inpm.SP12."name".dvs.repar.sph
+inpm.SP12."name".dvp.repar.sph
+
+oupm.SP12."name".filt.spt
+oupm.SP12."name".dvs.filt.sph
+oupm.SP12."name".dvp.filt.sph
+
+------------------------------------------------------
+Optional outputs
+------------------------------------------------------
+
+Optional model outputs are automatically calculated if the 
+parameters "do_expand" and "do_compare" in the dofilt_ESEP_new 
+script are set to "1". 
+
+------------------------------------------------------
+
+If do_expand = 1, the reparameterised and filtered model files 
+are evaluated at the given geographic input points for each depth
+in the "depth_layers.dat" file. 
+Note that they do not exactly correspond to the input values, 
+which should be representative of a layer (depth interval) and 
+not just one particular depth. 
+
+Outputfiles are located in the directory "geodyn/outputfiles"
+and have names according to:
+inpm.SP12."name".dvs.repar."depth".dat
+inpm.SP12."name".dvp.repar."depth".dat
+oupm.SP12."name".dvs.filt."depth".dat
+oupm.SP12."name".dvp.filt."depth".dat
+
+------------------------------------------------------
+
+If do_compare = 1, comparisons are performed between the reparameterised
+and filtered geodynamic files and the tomographic model SP12RTS.
+Spherical harmonic expansions are calculated for every 25 km depth,
+and located in "geodyn/rawfiles" with filenames:
+SP12RTS..ES."depth".raw
+e.g.
+inpm.SP12."name".dvs.repar."depth".raw
+oupm.SP12."name".dvs.filt."depth".raw
+(and equivalent for dvp)
+
+These files are then used to calculate power spectra for each model with 
+files located in "geodyn/pwrfiles" with names:
+SP12RTS..ES.pwr.dat
+SP12RTS..ES.pwr.deg.dat
+inpm.SP12."name".dvs.repar.pwr.dat
+inpm.SP12."name".dvs.repar.pwr.deg.dat
+oupm.SP12."name".dvs.filt.pwr.dat
+oupm.SP12."name".dvs.filt.pwr.deg.dat
+where files ending in ".pwr.dat" give the overall RMS power, and
+files ending in ".pwr.deg.dat" give the power per degree (and equivalent for dvp).
+
+In addition, the correlation is calculated between the tomographic model
+and the reparameterised and filtered ".sph" files. 
+The resulting files are located in the "geodyn/comparefiles" directory with names:
+corr.SP12RTS..inpm.SP12."name".dvs.repar.corr.dat
+corr.SP12RTS..inpm.SP12."name".dvs.repar.corr.deg.dat
+corr.SP12RTS..oupm.SP12."name".dvs.filt.corr.dat
+corr.SP12RTS..oupm.SP12."name".dvs.filt.corr.deg.dat
+where files ending in ".corr.dat" give the overall correlation, and
+files ending in ".corr.deg.dat" give the correlation per degree. 
+
+Finally, at all depths, the files are also expanded laterally, 
+using equidistant sampling for every 1, 2 or 5 degrees. 
+The resulting depth slices are located in "geodyn/slices"
+with filenames for dvp:
+SP12RTS..ES."depth".raw.dat
+inpm.SP12."name".dvs.repar.2800.raw.dat
+oupm.SP12."name".dvs.filt.2800.raw.dat
+and equivalent for dvp.
+
+------------------------------------------------------
+
+Please let us know if you have problems.
+
+Paula Koelemeijer
+pjkoelemeijer@cantab.net
+
+Jeroen Ritsema
+jritsema@umich.edu
+
+
