@@ -11,6 +11,23 @@ pjkoelemeijer@cantab.net
 Jeroen Ritsema
 jritsema@umich.edu
 
+## How to build and run the code
+
+0. Get a fortran compiler.
+   `brew install gfortran` or ...
+1. Build the code using `make`.
+2. Set up the data in utils using (ftp work too):
+   `curl -O http://www.opendap.org/pub/BALTO/tomofilt_new_ESEP_utils.tar.bz2`
+   `tar -xjf tomofilt_new_ESEP_utils.tar.bz2`	(make the `utils` directory)
+3. Run the the code using the test data using
+   `export TOMOFILT=\`pwd\``
+   `./dofilt_ESEP_opendap model name 1 5`	(yes, `model` and `name`)
+4. The results will be in two files:
+   `inpm.SP12.name.dvs.repar.sph` and
+   `inpm.SP12.name.dvp.repar.sph`
+   
+## Background
+
 Changes to teh TOMOFILT ESEP software were made by OPeNDAP (Kodi Neumiller
 <kneumiller@opendap.org> and James Gallagher <jgallagher@opednap.org>) so
 that only the code used for pre-processing data in netCDF files and served
