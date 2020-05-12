@@ -67,18 +67,6 @@ echo \"$header\"
 #-- on the sampling of dVs in the simulations.
 set regl = 1
 
-#-- norm damping decrease (increase) eps if you want less (more) damping
-#-- The numbers below are chosen in the actual model inversions.
-if ($degree == 12) then
-  set eps = 50d-4
-endif
-
-#-- spacing for the calculation of equidistant points in depth slices in step 6 
-#-- The numbers below reflect more or less the detail expected in each model
-if ($degree == 12) then
-  set spacing = 5
-endif
-
 #----------------------------------------------------------
 #-- do_step1 = 1 --> run the projection and catting for each SPH file
 set do_step1 = 1
@@ -86,28 +74,6 @@ set do_step1 = 1
 set do_step1a = 1
 #-- do_step1b = 1 --> catting of SPH files 
 set do_step1b = 1
-
-#-- do_step2 = 1 --> adding of SPH files into SPT file
-set do_step2 = 1
-#-- do_step3 = 1 --> applying resolution matrix 
-set do_step3 = 1
-
-#-- do_clean = 1 --> removing left-overs
-set do_clean = 1
-
-#-- do_expand = 1 --> calc velocity of repar and filt files for input points 
-set do_expand = 1
-
-if ( $do_expand == 2 ) then
-  echo "Note - output files currently not generated"
-endif
-
-#-- do_compare = 1 --> calc velocity of repar and filt files for every 25 km and equidistant points
-set do_compare = 1
-
-if ( $do_compare == 2 ) then
-  echo "Note - model comparisons currently not performed"
-endif
 
 #--------------------------------------------------------------
 
