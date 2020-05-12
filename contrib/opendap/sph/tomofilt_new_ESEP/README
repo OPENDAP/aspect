@@ -28,7 +28,7 @@ jritsema@umich.edu
    
 ## Background
 
-Changes to teh TOMOFILT ESEP software were made by OPeNDAP (Kodi Neumiller
+Changes to the TOMOFILT ESEP software were made by OPeNDAP (Kodi Neumiller
 <kneumiller@opendap.org> and James Gallagher <jgallagher@opednap.org>) so
 that only the code used for pre-processing data in netCDF files and served
 by OPeNDAP servers was built. We also added 'clean' targets to make it
@@ -43,6 +43,12 @@ push to GitHub, hence the tar file.
 
 The top-level Makefile can be used to build and clean the software.
 
+To make and compile the required code used by Aspect run:
+'make -f makefile.opendap' to build the code, 'make clean' to remove generated data,
+'make libclean' to remove the static libraries and 'make reallyclean'
+to remove the built binaries.
+
+---The following may currently cause errors as we try to refactor the build process---
 Use 'make all' to build the code, 'make clean' to remove generated data,
 'make libclean' to remove the static libraries and 'make reallyclean'
 to remove the built binaries.
