@@ -4,7 +4,7 @@
 all: libs srcs
 
 libs:
-	(cd lib && $(MAKE) $(MFLAGS))
+	(cd lib/libSphFunc_opendap && $(MAKE) $(MFLAGS))
 
 srcs:
 	(cd src && $(MAKE) $(MFLAGS))

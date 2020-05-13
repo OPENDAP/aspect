@@ -44,11 +44,12 @@ push to GitHub, hence the tar file.
 The top-level Makefile can be used to build and clean the software.
 
 To make and compile the required code used by Aspect run:
-'make -f makefile.opendap' to build the code, 'make clean' to remove generated data,
+'make all' to build the code, 'make clean' to remove generated data,
 'make libclean' to remove the static libraries and 'make reallyclean'
 to remove the built binaries.
 
 ---The following may currently cause errors as we try to refactor the build process---
-Use 'make all' to build the code, 'make clean' to remove generated data,
+To make and compile all of the libraries and code included in tomofilt_ESEP:
+Use 'make -f makefile.old' to build the old code, 'make clean' to remove generated data,
 'make libclean' to remove the static libraries and 'make reallyclean'
 to remove the built binaries.

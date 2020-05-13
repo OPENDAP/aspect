@@ -4,10 +4,10 @@
 all: libs srcs
 
 libs:
-	(cd lib/libSphFunc_opendap && $(MAKE) $(MFLAGS))
+	(cd lib && $(MAKE) $(MFLAGS))
 
 srcs:
-	(cd src && make -f Makefile.opendap $(MFLAGS))
+	(cd src && make -f Makefile.old $(MFLAGS))
 
 clean:
 	-rm *.sph
