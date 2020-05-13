@@ -18,6 +18,19 @@ cp    PK obtained from JR, 2013
 
       character*80 afl,evcfl,xyfl,getunx
 
+c   ----------------------------------------------
+c       invexpandxy.f
+c   ----------------------------------------------
+c      parameter (MXL=40)
+c      parameter (MXLENY=(MXL+1)**2)
+      dimension atd(MXLENY),y(MXLENY)
+      double precision evc(MXLENY),x(MXLENY),eigv(MXLENY)
+      double precision f1,sum,w,damp
+      dimension wnorm(MXLENY)
+
+      character*80 afl,evcfl,getunx,grdfl,ofl
+
+
 c     call chekcl('| :r:1:input x,y(,z) file (order= lon, lat!!!)'
 c    1          //'|-a:r:1:output .a file'
 c    1          //'|-evc:r:1:output .evc file'
