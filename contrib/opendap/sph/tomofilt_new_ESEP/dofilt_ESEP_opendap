@@ -139,12 +139,12 @@ if ( $do_step1 == 1 ) then
       $BINDIR/invexpandxy   < in
 
       #-- Projecting this layer into the 3D SPH (s12rts/s20rts/s40rts) parameterisation
-      echo Running sphexp
+      echo Running sphexp_opendap
       echo inpm.raw     >  in
       echo $dep1        >> in
       echo $dep2        >> in
       echo inpm.$iz.sph >> in
-      $BINDIR/sphexp        <  in
+      $BINDIR/sphexp_opendap        <  in
       @ iz++
     end
   endif

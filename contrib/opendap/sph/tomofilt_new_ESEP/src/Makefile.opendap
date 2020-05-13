@@ -14,15 +14,15 @@ original: mkexpmatxy invexpandxy mk3d_res mk3d_res_ESEP sphadd spt2sph \
 	sphexp linegrep depmap raw2xyz-eqdist sph2v_input pwrspecsph correlatorsph
 
 mkexpmatxy:
-	${FF} -o $(BIN)/mkexpmatxy mkexpmatxy.f $(LIB)/libSphFunc_OPeNDAP.a
+	${FF} -o $(BIN)/mkexpmatxy mkexpmatxy.f $(LIB)/libSphFunc_opendap.a
 
 invexpandxy:
-	${FF} -o $(BIN)/invexpandxy invexpandxy.f $(LIB)/libSphFunc_OPeNDAP.a
+	${FF} -o $(BIN)/invexpandxy invexpandxy.f $(LIB)/libSphFunc_opendap.a
 
 sphadd:
-	${FF} -o $(BIN)/sphadd sphadd.f $(LIB)/libSphFunc_OPeNDAP.a
+	${FF} -o $(BIN)/sphadd sphadd.f $(LIB)/libSphFunc_opendap.a
 
 sphexp:
 	${FF} -o $(BIN)/sphexp_opendap sphexp_opendap.f \
-	$(LIB)/libSphFunc_OPeNDAP.a
+	$(LIB)/libSphFunc_opendap.a
 

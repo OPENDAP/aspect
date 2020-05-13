@@ -24,6 +24,12 @@ LIBDIR = ..
 all: $(LIBDIR)/$(LIB).a
 
 $(LIBDIR)/$(LIB).a: \
+	$(LIBDIR)/$(LIB).a(ahouse2.o) \
+	$(LIBDIR)/$(LIB).a(dot.o) \
+	$(LIBDIR)/$(LIB).a(istlen.o) \
+	$(LIBDIR)/$(LIB).a(rmod2.o) \
+	$(LIBDIR)/$(LIB).a(wsphhead.o) \
+	$(LIBDIR)/$(LIB).a(legndr.o) \
 	$(LIBDIR)/$(LIB).a(normylm.o) \
 	$(LIBDIR)/$(LIB).a(ylm.o)
 	ranlib $(LIBDIR)/$(LIB).a
