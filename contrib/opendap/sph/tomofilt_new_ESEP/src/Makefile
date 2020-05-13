@@ -26,12 +26,18 @@ invexpandxy:
 	$(LIB)/libgeo.a
 
 sphadd:
+	${FF} -o $(BIN)/sphadd sphadd.f
+
+sphadd_org:
 	${FF} -o $(BIN)/sphadd sphadd.f \
 	$(LIB)/libHJVH.a \
 	$(LIB)/libSphFunc.a \
 	$(LIB)/libgeo.a
 
 sphexp:
+	${FF} -o $(BIN)/sphexp sphexp.f
+
+sphexp_org:
 	${FF} -o $(BIN)/sphexp sphexp.f \
 	$(LIB)/libHJVH.a \
 	$(LIB)/libSphFunc.a \

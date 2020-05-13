@@ -5,8 +5,8 @@
 # Get the utils data files from https://www.opendap.org/pub/BALTO.
 # The data files are too large for GitHub (> 100MB).
 
-/contrib/opendap/sph/tomofilt_new_ESEP/utils/
+utils/
 
-/contrib/opendap/sph/tomofilt_new_ESEP/lib/*.a
-/contrib/opendap/sph/tomofilt_new_ESEP/bin/*
-/contrib/opendap/sph/tomofilt_new_ESEP/geodyn/examplemodel/
+lib/*.a
+bin/
+geodyn/examplemodel/

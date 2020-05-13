@@ -17,7 +17,7 @@ AR_FLAGS = -rv
 	ar $(ARFLAGS) $@ $*.o
 	rm -f $*.o
 
-LIB = libSphFunc
+LIB = libSphFunc_opendap
 LIBDIR = ..
 
 # Added jhrg 5/6/20
@@ -26,7 +26,6 @@ all: $(LIBDIR)/$(LIB).a
 $(LIBDIR)/$(LIB).a: \
 	$(LIBDIR)/$(LIB).a(normylm.o) \
 	$(LIBDIR)/$(LIB).a(ylm.o)
-
 	ranlib $(LIBDIR)/$(LIB).a
 
 # Added jhrg 5/6/20
