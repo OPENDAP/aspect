@@ -6,12 +6,15 @@ CC        = gcc -O3
 BIN       = $(TOMOFILT)/bin
 LIB       = $(TOMOFILT)/lib
 
-all: mkexpmatxy invexpandxy sphexp sphadd
+all: opendap_convert mkexpmatxy invexpandxy sphexp sphadd
 
 # The original Makefile built all of the binaries, but opendap's script
 # only needs some of them. jhrg 5/7/20
 original: mkexpmatxy invexpandxy mk3d_res mk3d_res_ESEP sphadd spt2sph \
 	sphexp linegrep depmap raw2xyz-eqdist sph2v_input pwrspecsph correlatorsph
+
+opendap_convert:
+	${FF} -o $(BIN)/opendap_convert opendap_convert.f $(LIB)/libSphFunc_opendap.a
 
 mkexpmatxy:
 	${FF} -o $(BIN)/mkexpmatxy mkexpmatxy.f $(LIB)/libSphFunc_opendap.a
