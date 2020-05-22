@@ -119,24 +119,23 @@ if ( $do_step1 == 1 ) then
       #-- mkexpmatxy for each layer separately.
       #-- Can be done, but let's assume here that the grids for each layer are the same ....
       echo Making RAW file ...
-      if ($iz == $first_layer) then
+      #if ($iz == $first_layer) then
         echo Running opendap_convert
         echo inpm       >  in
         echo inpm.a     >> in
         echo inpm.evc   >> in
         echo $degree    >> in
+
+      #invexpandxy
       echo inpm.raw     >> in
       echo $regl        >> in
-      $BINDIR/opendap_convert   < in
-      endif
 
-      #-- Projecting this layer into the 3D SPH (s12rts/s20rts/s40rts) parameterisation
-      echo Running sphexp_opendap
-      echo inpm.raw     >  in
+      #sphexp -- Projecting this layer into the 3D SPH (s12rts/s20rts/s40rts) parameterisation
       echo $dep1        >> in
       echo $dep2        >> in
       echo inpm.$iz.sph >> in
-      $BINDIR/sphexp_opendap        <  in
+
+      $BINDIR/opendap_convert   < in
       @ iz++
     end
   endif
