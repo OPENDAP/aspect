@@ -6,7 +6,10 @@ CC        = gcc -O3
 BIN       = $(TOMOFILT)/bin
 LIB       = $(TOMOFILT)/lib
 
-all: opendap_convert mkexpmatxy invexpandxy sphexp sphadd
+all: check_tomofilt opendap_convert mkexpmatxy invexpandxy sphexp sphadd
+
+check_tomofilt:
+	@if test -n "$$TOMOFILT"; then true; else echo "Define TOMOFILT"; false; fi
 
 # The original Makefile built all of the binaries, but opendap's script
 # only needs some of them. jhrg 5/7/20
