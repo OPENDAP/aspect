@@ -1021,12 +1021,12 @@ namespace aspect
           for (uint j = 0; j < lonSize; j++)
             {
 
-                data_string += to_string(lonVector[j]);
-                data_string += "\n";
               for (uint k = 0; k < latSize; k++)
                 {
-                  data_string += "\t";
-                  data_string += to_string(latVector[k]);
+                  data_string += to_string(lonVector[k]);
+                  data_string += " ";
+
+                  data_string += to_string(latVector[j]);
                   data_string += " ";
 
                   //Use this formula to calculate the location in the single dimension array as if it were 3D
@@ -1060,12 +1060,13 @@ namespace aspect
             }
           data_string += "\n";
         }
+#endif
 
-#ifdef SPH_DEBUG
-      std::cerr << "Columns (lat, long, dvs):" << std::endl << data_string << std::endl;
+//#ifdef SPH_DEBUG
+      std::cerr << "Columns (lat, lon, dvs):" << std::endl << data_string << std::endl;
       std::cerr << std::endl;
       std::cerr << "Depth:" << std::endl << depthColumns << std::endl;
-#endif
+//#endif
       //data_string = sph_conversion(netcdfColumns, depth);
     }
 
