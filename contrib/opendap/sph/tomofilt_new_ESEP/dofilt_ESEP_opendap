@@ -119,7 +119,6 @@ if ( $do_step1 == 1 ) then
       #-- mkexpmatxy for each layer separately.
       #-- Can be done, but let's assume here that the grids for each layer are the same ....
       echo Making RAW file ...
-      #if ($iz == $first_layer) then
         echo Running opendap_convert
         echo inpm       >  in
         echo inpm.a     >> in

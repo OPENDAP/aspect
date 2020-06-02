@@ -32,16 +32,14 @@ c                   sphexp.f
 c   ----------------------------------------------
       parameter (MAXD=21)
       parameter (MAXP=2891)
-      double precision atd2(MAXD)
+      parameter (MXMAT2=(MAXD*(MAXD+1)/2))
       dimension z(MAXP+1,21)
       dimension d(MAXP+1)
       dimension rawvec(MXLENY)
 
-      double precision eigv2(MAXD),x2(MAXD),evc2(MAXD)
-      double precision dim1(MAXD), dim2(MAXD), dim3(MAXD), dim4(MAXD)
-      double precision dim5(MAXD), dim6(MAXD), dim7(MAXD), dim8(MAXD)
+      double precision x2(MAXD),damp2
 
-      character*80 rawfl,sphfl
+      character*80 sphfl
       character*120 strt
 
 
@@ -162,7 +160,7 @@ c     normaliseer harmonics
 c-- Hendrik multiplied by 0.01 .... WHY?
       write(24,'(5e16.8)') (x(i)*.01,i=1,leny)
 c--   write(24,'(5e16.8)') (x(i),i=1,leny)
-      close(24)
+c      close(24)
 
 c   ------------sphexp---------------
 
@@ -170,7 +168,6 @@ c      rawfl - inpm.raw
 c      dep1 - $dep1
 c      dep2 - $dep2
 c      sphfl - inpm.$iz.sph
-      rewind 23
       rewind 24
       read(5,*) dep1
       read(5,*) dep2
@@ -182,14 +179,12 @@ c      sphfl - inpm.$iz.sph
       id2 = nint(2891.-dep1)
 
 c --  read raw file
-      open(25,file=ofl,status='old')
-      read(25,*) lmax
       write(6,*) 'model lmax =',lmax
       np=(lmax+1)**2
       if(lmax.gt.LMX) stop 'STOP >>>> lmax.gt.LMX'
       write(6,*) 'model np =',np
-      read(25,'(5e16.8)') (rawvec(i),i=1,np)
-      close(25)
+      read(24,'(5e16.8)') (rawvec(i),i=1,np)
+      close(24)
 
 c    Calculate the spline basis functions at a regular grid
       call splhsetup()
@@ -227,7 +222,7 @@ c       write(20+ip,*) xd,z(j+m+1,ip)
 
       open(101,file='tmp.evc',status='unknown',form='unformatted')
       write(6,*) 'decomposing......'
-      call ahouse(leny,101,ata,dim1,dim2,dim3,dim4,dim5,dim6,dim7,dim8,eigv)
+      call ahouse(leny,101,ata,d1,d2,d3,d4,d5,d6,d7,d8,eigv)
       close(101)
 
       open(101,file='tmp.evc',status='unknown',form='unformatted')
@@ -252,40 +247,40 @@ c       write(20+ip,*) xd,z(j+m+1,ip)
          sum=sum+dble(atd(j))*evc(j)
         enddo
 
-        f1=1.d0/(eigv(i)+damp)
+        f1=1.d0/(eigv(i)+damp2)
         w=sum*f1
         do j=1,leny
-         x(j)=x(j)+w*evc(j)
+         x2(j)=x2(j)+w*evc(j)
         enddo
        endif
       enddo
       do i=1,leny
-       write(6,*) 'AA', i,x(i)
+       write(6,*) 'AA', i,x2(i)
       enddo
 
       ind=1
-      open(24,file=sphfl,status='unknown')
+      open(26,file=sphfl,status='unknown')
       idp1=4
       idp2=24
 	write(6,*) 'lmax,idp1,idp2=', lmax,idp1,idp2
       call wsphhead(lmax,idp1,idp2,strt,lstrt)
-      write(24,*) strt(1:lstrt)
+      write(26,*) strt(1:lstrt)
       do j=idp1,idp2
-        spl = x(j-3)
+        spl = x2(j-3)
         write(6,*) 'spl= ', spl
         ind=1
         do k=0,lmax
           ind1=ind+2*k
-          write(24,'(11e12.4)')(spl*rawvec(l),l=ind,ind1)
+          write(26,'(11e12.4)')(spl*rawvec(l),l=ind,ind1)
           ind=ind1+1
         enddo
       enddo
-      close(24)
+      close(26)
 
       do ii=1,mp
        v=0.
        do ip=1,leny
-        v=v+z(ii,ip)*sngl(x(ip))
+        v=v+z(ii,ip)*sngl(x2(ip))
        enddo
        write(103,*) ii,v
       enddo
