@@ -1,0 +1,55 @@
+
+# May 2020
+
+This describes changes to the TOMOFILT ESEP package OPeNDAP got from
+Sarah Stamps in early 2020. The original documentation is in the
+readme_ESEP_new document. The authors of the software are:
+
+Paula Koelemeijer
+pjkoelemeijer@cantab.net
+
+Jeroen Ritsema
+jritsema@umich.edu
+
+## How to build and run the code
+
+0. Get a fortran compiler.
+   `brew install gfortran` or ...
+1. Build the code using `make`.
+2. Set up the data in utils using (ftp work too):
+   `curl -O http://www.opendap.org/pub/BALTO/tomofilt_new_ESEP_utils.tar.bz2`
+   `tar -xjf tomofilt_new_ESEP_utils.tar.bz2`	(make the `utils` directory)
+3. Run the the code using the test data using
+   `export TOMOFILT=\`pwd\``
+   `./dofilt_ESEP_opendap model name 1 5`	(yes, `model` and `name`)
+4. The results will be in two files:
+   `inpm.SP12.name.dvs.repar.sph` and
+   `inpm.SP12.name.dvp.repar.sph`
+   
+## Background
+
+Changes to the TOMOFILT ESEP software were made by OPeNDAP (Kodi Neumiller
+<kneumiller@opendap.org> and James Gallagher <jgallagher@opednap.org>) so
+that only the code used for pre-processing data in netCDF files and served
+by OPeNDAP servers was built. We also added 'clean' targets to make it
+easier to see which files were built by the code and which are static inputs
+or examples.
+
+To run the programs here, you will need data files for the 'utils' directory.
+Get those from http://www.opendap.org/pub/BALTO/tomofilt_new_ESEP_utils.tar.bz2.
+Download the tar file and expand that here. It will make the 'utils' directory
+and put the data files inside it. Some of the data files are too large to
+push to GitHub, hence the tar file.
+
+The top-level Makefile can be used to build and clean the software.
+
+To make and compile the required code used by Aspect run:
+'make all' to build the code, 'make clean' to remove generated data,
+'make libclean' to remove the static libraries and 'make reallyclean'
+to remove the built binaries.
+
+---The following may currently cause errors as we try to refactor the build process---
+To make and compile all of the libraries and code included in tomofilt_ESEP:
+Use 'make -f makefile.old' to build the old code, 'make clean' to remove generated data,
+'make libclean' to remove the static libraries and 'make reallyclean'
+to remove the built binaries.

@@ -18,9 +18,16 @@
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 
+# Added to enable builds on OSX 10.13. jhrg 4/29/20
+set (CMAKE_CXX_STANDARD 14)
+
 MESSAGE(STATUS "====================================================")
 MESSAGE(STATUS "============ Configuring ASPECT ====================")
 MESSAGE(STATUS "====================================================")
+
+# Added to build executables in contrib/opendap/sph
+# jhrg 5/1/20
+add_subdirectory(contrib/opendap/sph)
 
 # Set the name of the project and target:
 SET(TARGET "aspect")

@@ -1,0 +1,3 @@
+
+This directory holds some converted sources, a cmake build file, and
+a subdir with the origina fortran code for the SPH formatter.
