@@ -1062,11 +1062,11 @@ namespace aspect
         }
 #endif
 
-//#ifdef SPH_DEBUG
-      std::cerr << "Columns (lat, lon, dvs):" << std::endl << data_string << std::endl;
+#ifdef SPH_DEBUG
+      std::cerr << "Columns (lon, lat, dvs):" << std::endl << data_string << std::endl;
       std::cerr << std::endl;
       std::cerr << "Depth:" << std::endl << depthColumns << std::endl;
-//#endif
+#endif
       //data_string = sph_conversion(netcdfColumns, depth);
     }
 
