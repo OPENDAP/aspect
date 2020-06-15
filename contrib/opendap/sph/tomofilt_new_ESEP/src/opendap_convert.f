@@ -299,7 +299,7 @@ c ---------------------------------------------------------------------
 
       character*120 str1,str2,strt
 
-      if(lmax.gt.MAXL) stop 'wsphhead >>> lmax too big for format statement'
+      if(lmax.gt.MAXL) stop 'wsphhead >>> lmax too big for stment'
       if(idp2.gt.MAXP) stop 'wsphhead >>> idp2 too large'
       do i=0,MAXL
        if(i.le.lmax) then
@@ -323,7 +323,7 @@ c ---------------------------------------------------------------------
 
       len1=istlen(str1)
       len2=istlen(str2)
-      if((len1+len2).gt.120) stop 'wsphhead >>> increase dimension of strt'
+      if((len1+len2).gt.120) stop 'wsphhead >>> increase dim of strt'
       strt=str1(1:len1)//str2(1:len2)
       lstrt=len1+len2+1
       end
