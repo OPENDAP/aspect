@@ -18,9 +18,15 @@
 
 project(opendap-sph CXX)
 
+add_executable(opendap_convert opendap_convert.cpp)
 add_executable(invexpandxy invexpandxy.cpp)
 add_executable(mkexpmatxy mkexpmatxy.cpp)
 add_executable(sphexp sphexp.cpp)
+
+target_include_directories(opendap_convert PUBLIC
+        /usr/include
+        /Applications/cctbx-dev-2106/modules/cctbx_project/fable
+        /Applications/cctbx-dev-2106/modules/cctbx_project)
 
 target_include_directories(invexpandxy PUBLIC
         /usr/include

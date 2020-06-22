@@ -951,6 +951,131 @@ namespace aspect
       return static_cast<bool>(ifile);
     }
 
+
+    std::string sph_conversion(std::vector<float> depth, std::vector<float> columns, int current_layer, int last_layer)
+    {
+        //This is the working directory of tomofilt/
+        if ( '$TOMOFILT' == "" ) {
+            cerr << "Set \"TOMOFILT\" to the directory with the model data, lib and bin dirs\n";
+        }
+
+        //This includes the various SP12RTS models, as well as the S20RTS/S40RTS
+        //model files such the smth and evc files
+        //These are separated into the subdirectories
+        //subdirectories $UTILS/SP12RTS, $UTILS/S12RTS, $UTILS/S20RTS and $UTILS/S40RTS
+        std::string UTILS = '$TOMOFILT/utils';
+
+        //binaries
+        std::string BINDIR = '$TOMOFILT/bin';
+
+        //Directory with Geodynamics simulations
+        std::string gdir = '$TOMOFILT/geodyn';
+
+        //Parameters defined here are for the geodynamic simulation
+        std::vector<float>         = depth;     //depth
+        std::vector<float>         = columns;   //lat,lon, dvs array
+
+        //degree = 12 for SP12RTS
+        int degree = 12;
+        cout << "Filtering up to degree $degree\n";
+        if ($degree != 12)
+            cerr << "Define \"degree\" to be 12\n";
+
+        //regularization factor which depends mostly
+        //on the sampling of dVs in the simulations.
+        int regl = 1;
+
+        int num;
+        int n;
+
+        int dep1;
+        int dep2;
+
+        //Step 1
+        //Run the reparametrisation for both the dvs and dvp models
+        //We assume slice files for both are present in the same directory
+        //and that they have the same number of layers
+        foreach name ( ${names}.dvs ${names}.dvp ) {
+            echo "Reparameterising file:" $name
+
+            //--Step 1a--//
+            //Projecting the field parameters into SPH parameterisation
+            //Do this for each layer separately
+
+            //begin with layer "current_layer" (below the crust ...)
+            while ( current_layer < last_layer ) {
+            //make a copy
+            num = current_layer;
+
+            cat $gdir/$model/${name}.layer.${num}.dat > out
+
+            //depth range
+            dep1 = depth[current_layer];
+            dep2 = depth[current_layer + 1];
+
+            //number of gridpoints
+            n = `wc -l out | awk '{print $1}'`
+
+            //copy maps into "inpm"
+            cat out | awk '{print $1, $2, $3}' > inpm
+
+            //make RAW file (... projection into spherical harmonics).
+            //This is only necessary for iz="first_layer", because all the
+            //layers have the same distribution of points on the globe
+            //so the spherical harmonic expansion coefficients are the same for each layer.
+            //If the layers have different distributions, you will need to run
+            //mkexpmatxy for each layer separately.
+            //Can be done, but let's assume here that the grids for each layer are the same ....
+            cout << Running opendap_convert << endl;
+            inpm       >  in
+            inpm.a     >> in
+            inpm.evc   >> in
+            $degree    >> in
+
+            inpm.raw     >> in
+            $regl        >> in
+
+            //Projecting this layer into the 3D SPH (s12rts/s20rts/s40rts) parameterisation
+            dep1        >> in
+            dep2        >> in
+            inpm.$iz.sph >> in
+
+            $BINDIR/opendap_convert   < in
+
+            current_layer++;
+            }
+        }
+
+        //--Step 1b--//
+        //Catting each layer into a single SPH file
+
+        //Cat SPH files
+        foreach sph ( inpm.?.sph inpm.??.sph inpm.???.sph )
+        set n = $sph:r:e
+        if ($n == $first_layer)
+            /bin/cp $sph ll.sph
+        else {
+            //ll.sph = ll.sph + $sph
+            ll.sph       >  in
+            $sph         >> in
+            dummy.sph    >> in
+            $BINDIR/sphadd        < in  > out_sphadd
+            /bin/mv dummy.sph ll.sph
+        }
+
+        /bin/mv ll.sph inpm.SP${degree}.$name.repar.sph
+        cp inpm.SP${degree}.$name.repar.sph $gdir/
+        /bin/rm inpm.?.sph inpm.??.sph inpm.???.sph out_sphadd
+        /bin/rm fort.103 in inpm inpm.a inpm.evc inpm.raw out tmp.evc
+
+        //The file "inpm.SP${degree}.$name.repar.sph" is the geodynamics file
+        //projected into the sp12rts parameterisation
+        //Where $name is both $name_dvs and $name_dvp, resulting in two files.
+                end
+        endif
+
+    }
+
     /**
      * Store the value of the variable names for lookup inside a netcdf file.
      */
