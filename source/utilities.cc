@@ -972,14 +972,14 @@ namespace aspect
         std::string gdir = '$TOMOFILT/geodyn';
 
         //Parameters defined here are for the geodynamic simulation
-        std::vector<float>         = depth;     //depth
-        std::vector<float>         = columns;   //lat,lon, dvs array
+        std::vector<float> depth;     //depth
+        std::vector<float> columns;   //lat,lon, dvs array
 
         //degree = 12 for SP12RTS
         int degree = 12;
-        cout << "Filtering up to degree $degree\n";
+            cout << "Filtering up to degree " << degree << endl;
         if ($degree != 12)
-            cerr << "Define \"degree\" to be 12\n";
+            cerr << "Define \"degree\" to be 12" << endl; // TODO throw an exception.
 
         //regularization factor which depends mostly
         //on the sampling of dVs in the simulations.

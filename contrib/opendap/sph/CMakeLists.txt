@@ -16,29 +16,13 @@
 # along with ASPECT; see the file doc/COPYING.  If not see
 # <http://www.gnu.org/licenses/>.
 
-project(opendap-sph CXX)
+project(opendap-sph Fortran)
 
-add_executable(opendap_convert opendap_convert.cpp)
-add_executable(invexpandxy invexpandxy.cpp)
-add_executable(mkexpmatxy mkexpmatxy.cpp)
-add_executable(sphexp sphexp.cpp)
+add_executable(opendap_convert opendap_convert.f)
+add_executable(sphadd sphadd.f)
 
 target_include_directories(opendap_convert PUBLIC
-        /usr/include
-        /Applications/cctbx-dev-2106/modules/cctbx_project/fable
-        /Applications/cctbx-dev-2106/modules/cctbx_project)
+        /usr/include)
 
-target_include_directories(invexpandxy PUBLIC
-        /usr/include
-        /Applications/cctbx-dev-2106/modules/cctbx_project/fable
-        /Applications/cctbx-dev-2106/modules/cctbx_project)
-
-target_include_directories(mkexpmatxy PUBLIC
-        /usr/include
-        /Applications/cctbx-dev-2106/modules/cctbx_project/fable
-        /Applications/cctbx-dev-2106/modules/cctbx_project)
-
-target_include_directories(sphexp PUBLIC
-        /usr/include
-        /Applications/cctbx-dev-2106/modules/cctbx_project/fable
-        /Applications/cctbx-dev-2106/modules/cctbx_project)
+target_include_directories(sphadd PUBLIC
+        /usr/include)
