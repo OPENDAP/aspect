@@ -582,9 +582,7 @@ SUBROUTINE AHOUSE(N, IU, C, Y, A, B, P, TA, TB, W, V, EV)
     EV(1) = C(1)
     Y(1) = 1.D0
     WRITE(IU) EV(1), Y(1)
-    !END
-
-    FILE IU
+    END FILE IU
     REWIND IU
     RETURN
     3 A(1) = C(1)

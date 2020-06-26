@@ -951,8 +951,14 @@ namespace aspect
       return static_cast<bool>(ifile);
     }
 
+    /*
+     * Fortran netcdf -> sph converter
+     */
+    extern "C" {
+          void _opendap_convert();
+    }
 
-    std::string sph_conversion(std::vector<float> depth, std::vector<float> columns, int current_layer, int last_layer)
+    std::string sph_conversion(std::string columnsArray, std::string depthArray, int current_layer, int last_layer)
     {
         //This is the working directory of tomofilt/
         if ( '$TOMOFILT' == "" ) {
@@ -975,11 +981,25 @@ namespace aspect
         std::vector<float> depth;     //depth
         std::vector<float> columns;   //lat,lon, dvs array
 
+        //Store the vector values in temp files so that the fortran converter can call them
+        std::FILE* depth_file = std::tmpfile();
+        std::fputs(depthArray, depth_file);
+        /*for (int i = 0; i < depthArray.size(); i++) {
+            std::fputs(to_string(depthArray[i]), depth_file);
+            std::fputs("\n", depth_file);
+        }*/
+        std::FILE* columns_file = std::tmpfile();
+        std::fputs(columnsArray, columns_file);
+        /*for (int i = 0; i < columnsArray.size() - 1; i += 2) {
+            std::fputs(to_string(columnsArray[i]), columns_file);
+            std::fputs(to_string(columnsArray[i + 1]), columns_file);
+        }*/
+
         //degree = 12 for SP12RTS
         int degree = 12;
             cout << "Filtering up to degree " << degree << endl;
-        if ($degree != 12)
-            cerr << "Define \"degree\" to be 12" << endl; // TODO throw an exception.
+        if (degree != 12)
+            cerr << "Define \"degree\" to be 12" << endl; //TODO throw an exception.
 
         //regularization factor which depends mostly
         //on the sampling of dVs in the simulations.
@@ -1002,11 +1022,15 @@ namespace aspect
             //Projecting the field parameters into SPH parameterisation
             //Do this for each layer separately
 
+            //FIXME: I don't think a loop is needed, for Aspect there will only
+            //  be one set of calls per request
             //begin with layer "current_layer" (below the crust ...)
             while ( current_layer < last_layer ) {
             //make a copy
             num = current_layer;
 
+            //FIXME: concat with this call instead?
+            //out << $gdir/$model/${name}.layer.${num}.dat.rdbuf();
             cat $gdir/$model/${name}.layer.${num}.dat > out
 
             //depth range
@@ -1026,21 +1050,22 @@ namespace aspect
             //If the layers have different distributions, you will need to run
             //mkexpmatxy for each layer separately.
             //Can be done, but let's assume here that the grids for each layer are the same ....
-            cout << Running opendap_convert << endl;
+            cout << "Running opendap_convert" << endl;
             inpm       >  in
             inpm.a     >> in
             inpm.evc   >> in
-            $degree    >> in
+            degree    >> in
 
             inpm.raw     >> in
-            $regl        >> in
+            regl        >> in
 
             //Projecting this layer into the 3D SPH (s12rts/s20rts/s40rts) parameterisation
             dep1        >> in
             dep2        >> in
             inpm.$iz.sph >> in
 
-            $BINDIR/opendap_convert   < in
+            //Call the fortran converter program
+            _opendap_convert(columns_file, depth_file, current_layer, last_layer)   < in
 
             current_layer++;
             }
@@ -1050,17 +1075,18 @@ namespace aspect
         //Catting each layer into a single SPH file
 
         //Cat SPH files
-        foreach sph ( inpm.?.sph inpm.??.sph inpm.???.sph )
-        set n = $sph:r:e
-        if ($n == $first_layer)
-            /bin/cp $sph ll.sph
-        else {
-            //ll.sph = ll.sph + $sph
-            ll.sph       >  in
-            $sph         >> in
-            dummy.sph    >> in
-            $BINDIR/sphadd        < in  > out_sphadd
-            /bin/mv dummy.sph ll.sph
+        foreach sph ( inpm.?.sph inpm.??.sph inpm.???.sph ) {
+            n = $sph:r:e
+            if (n == first_layer)
+                /bin/cp $sph ll.sph
+            else {
+                //ll.sph = ll.sph + $sph
+                ll.sph       >  in
+                $sph         >> in
+                dummy.sph    >> in
+                $BINDIR/sphadd        < in  > out_sphadd
+                /bin/mv dummy.sph ll.sph
+            }
         }
 
         /bin/mv ll.sph inpm.SP${degree}.$name.repar.sph
@@ -1071,7 +1097,7 @@ namespace aspect
         //The file "inpm.SP${degree}.$name.repar.sph" is the geodynamics file
         //projected into the sp12rts parameterisation
         //Where $name is both $name_dvs and $name_dvp, resulting in two files.
-                end
+        end
         endif
 
     }
@@ -1148,16 +1174,16 @@ namespace aspect
 
               for (uint k = 0; k < latSize; k++)
                 {
-                  data_string += to_string(lonVector[k]);
-                  data_string += " ";
+                  netcdfColumns += to_string(lonVector[k]);
+                  netcdfColumns += " ";
 
-                  data_string += to_string(latVector[j]);
-                  data_string += " ";
+                  netcdfColumns += to_string(latVector[j]);
+                  netcdfColumns += " ";
 
                   //Use this formula to calculate the location in the single dimension array as if it were 3D
                   uint index = i * latSize * lonSize + j * lonSize + k;
-                  data_string += to_string(dvs[index]);
-                  data_string += "\n";
+                  netcdfColumns += to_string(dvs[index]);
+                  netcdfColumns += "\n";
                 }
             }
         }
@@ -1192,7 +1218,10 @@ namespace aspect
       std::cerr << std::endl;
       std::cerr << "Depth:" << std::endl << depthColumns << std::endl;
 #endif
-      //data_string = sph_conversion(netcdfColumns, depth);
+
+      //Use 1 as the starting layer. If later on we want the user to be able to change which layer the sph conversion
+      // starts at we can add it as a parameter in the prm
+      data_string = sph_conversion(netcdfColumns, depthColumns, 1, depthVector.size());
     }
 
 //Added a check to read data files from a url
