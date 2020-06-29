@@ -56,6 +56,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <stdlib.h>     // for system()
 
 #include <boost/math/special_functions/spherical_harmonic.hpp>
 #include <boost/lexical_cast.hpp>
@@ -958,6 +959,7 @@ namespace aspect
           void _opendap_convert();
     }
 
+#if 0
     std::string sph_conversion(std::string columnsArray, std::string depthArray, int current_layer, int last_layer)
     {
         //This is the working directory of tomofilt/
@@ -1101,6 +1103,7 @@ namespace aspect
         endif
 
     }
+#endif
 
     /**
      * Store the value of the variable names for lookup inside a netcdf file.
@@ -1219,9 +1222,17 @@ namespace aspect
       std::cerr << "Depth:" << std::endl << depthColumns << std::endl;
 #endif
 
-      //Use 1 as the starting layer. If later on we want the user to be able to change which layer the sph conversion
+#if 0
+        //Use 1 as the starting layer. If later on we want the user to be able to change which layer the sph conversion
       // starts at we can add it as a parameter in the prm
       data_string = sph_conversion(netcdfColumns, depthColumns, 1, depthVector.size());
+#endif
+      string tomofilt_home = "/Users/jimg/src/opendap/aspect/contrib/opendap/sph/tomofilt_new_ESEP";
+      string command = "TOMOFILT=\"" + tomofilt_home + "\"; " + tomofilt_home + "/dofilt_ESEP_opendap model name 1 3";
+      int status = system(command.c_str());
+      if (status != 0) {
+          cerr << "Error, system status: " << status << endl;
+      }
     }
 
 //Added a check to read data files from a url
