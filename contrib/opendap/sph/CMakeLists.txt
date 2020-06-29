@@ -18,11 +18,10 @@
 
 project(opendap-sph Fortran)
 
-add_executable(opendap_convert opendap_convert.f)
-add_executable(sphadd sphadd.f)
+add_executable(opendap_convert opendap_convert.f90)
+add_executable(sphadd sphadd.f90)
 
-target_include_directories(opendap_convert PUBLIC
-        /usr/include)
+target_include_directories(opendap_convert PUBLIC)
+target_link_libraries(opendap_convert contrib/opendap/sph/tomofilt_new_ESEP/lib/libSphFunc_opendap)
 
-target_include_directories(sphadd PUBLIC
-        /usr/include)
+target_include_directories(sphadd PUBLIC)
