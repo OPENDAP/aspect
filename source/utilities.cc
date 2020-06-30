@@ -969,13 +969,14 @@ namespace aspect
         //model files such the smth and evc files
         //These are separated into the subdirectories
         //subdirectories $UTILS/SP12RTS, $UTILS/S12RTS, $UTILS/S20RTS and $UTILS/S40RTS
-        std::string UTILS = '$TOMOFILT/utils';
+        std::string tomofilt = string(getenv("TOMOFILT"));
+        std::string UTILS = tomofilt.append("/utils"); //'$TOMOFILT/utils';
 
         //binaries
-        std::string BINDIR = '$TOMOFILT/bin';
+        std::string BINDIR = tomofilt.append("/bin");   //'$TOMOFILT/bin';
 
         //Directory with Geodynamics simulations
-        std::string gdir = '$TOMOFILT/geodyn';
+        std::string gdir = tomofilt.append("/geodyn");  //'$TOMOFILT/geodyn';
 
         //Parameters defined here are for the geodynamic simulation
         std::vector<float> depth;     //depth
