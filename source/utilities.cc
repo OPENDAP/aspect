@@ -984,16 +984,9 @@ namespace aspect
         //Store the vector values in temp files so that the fortran converter can call them
         std::FILE* depth_file = std::tmpfile();
         std::fputs(depthArray, depth_file);
-        /*for (int i = 0; i < depthArray.size(); i++) {
-            std::fputs(to_string(depthArray[i]), depth_file);
-            std::fputs("\n", depth_file);
-        }*/
+
         std::FILE* columns_file = std::tmpfile();
         std::fputs(columnsArray, columns_file);
-        /*for (int i = 0; i < columnsArray.size() - 1; i += 2) {
-            std::fputs(to_string(columnsArray[i]), columns_file);
-            std::fputs(to_string(columnsArray[i + 1]), columns_file);
-        }*/
 
         //degree = 12 for SP12RTS
         int degree = 12;
@@ -1026,48 +1019,48 @@ namespace aspect
             //  be one set of calls per request
             //begin with layer "current_layer" (below the crust ...)
             while ( current_layer < last_layer ) {
-            //make a copy
-            num = current_layer;
+                //make a copy
+                num = current_layer;
 
-            //FIXME: concat with this call instead?
-            //out << $gdir/$model/${name}.layer.${num}.dat.rdbuf();
-            cat $gdir/$model/${name}.layer.${num}.dat > out
+                //FIXME: concat with this call instead?
+                //out << $gdir/$model/${name}.layer.${num}.dat.rdbuf();
+                cat $gdir/$model/${name}.layer.${num}.dat > out
 
-            //depth range
-            dep1 = depth[current_layer];
-            dep2 = depth[current_layer + 1];
+                //depth range
+                dep1 = depth[current_layer];
+                dep2 = depth[current_layer + 1];
 
-            //number of gridpoints
-            n = `wc -l out | awk '{print $1}'`
+                //number of gridpoints
+                n = `wc -l out | awk '{print $1}'`
 
-            //copy maps into "inpm"
-            cat out | awk '{print $1, $2, $3}' > inpm
+                //copy maps into "inpm"
+                cat out | awk '{print $1, $2, $3}' > inpm
 
-            //make RAW file (... projection into spherical harmonics).
-            //This is only necessary for iz="first_layer", because all the
-            //layers have the same distribution of points on the globe
-            //so the spherical harmonic expansion coefficients are the same for each layer.
-            //If the layers have different distributions, you will need to run
-            //mkexpmatxy for each layer separately.
-            //Can be done, but let's assume here that the grids for each layer are the same ....
-            cout << "Running opendap_convert" << endl;
-            inpm       >  in
-            inpm.a     >> in
-            inpm.evc   >> in
-            degree    >> in
+                //make RAW file (... projection into spherical harmonics).
+                //This is only necessary for iz="first_layer", because all the
+                //layers have the same distribution of points on the globe
+                //so the spherical harmonic expansion coefficients are the same for each layer.
+                //If the layers have different distributions, you will need to run
+                //mkexpmatxy for each layer separately.
+                //Can be done, but let's assume here that the grids for each layer are the same ....
+                cout << "Running opendap_convert" << endl;
+                inpm       >  in
+                inpm.a     >> in
+                inpm.evc   >> in
+                degree    >> in
 
-            inpm.raw     >> in
-            regl        >> in
+                inpm.raw     >> in
+                regl        >> in
 
-            //Projecting this layer into the 3D SPH (s12rts/s20rts/s40rts) parameterisation
-            dep1        >> in
-            dep2        >> in
-            inpm.$iz.sph >> in
+                //Projecting this layer into the 3D SPH (s12rts/s20rts/s40rts) parameterisation
+                dep1        >> in
+                dep2        >> in
+                inpm.$iz.sph >> in
 
-            //Call the fortran converter program
-            _opendap_convert(columns_file, depth_file, current_layer, last_layer)   < in
+                //Call the fortran converter program
+                _opendap_convert(columns_file, depth_file, current_layer, last_layer)   < in
 
-            current_layer++;
+                current_layer++;
             }
         }
 
