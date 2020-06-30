@@ -18,8 +18,11 @@
 
 project(opendap-sph Fortran)
 
-add_executable(opendap_convert opendap_convert.f)
-add_executable(sphadd sphadd.f)
+add_executable(opendap_convert opendap_convert.f90)
+# FIXME use the relative path 
+target_link_libraries(opendap_convert /Users/jimg/src/opendap/aspect/contrib/opendap/sph/tomofilt_new_ESEP/lib/libSphFunc_opendap.a)
+
+add_executable(sphadd sphadd.f90)
 
 target_include_directories(opendap_convert PUBLIC
         /usr/include)
