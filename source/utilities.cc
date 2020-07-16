@@ -56,6 +56,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <stdlib.h>
+#include <iostream>
 
 #include <boost/math/special_functions/spherical_harmonic.hpp>
 #include <boost/lexical_cast.hpp>
@@ -955,13 +957,14 @@ namespace aspect
      * Fortran netcdf -> sph converter
      */
     extern "C" {
-          void _opendap_convert();
+          void opendap_convert_(std::string model, std::string name, int starting_layer, int final_layer);
     }
 
     std::string sph_conversion(std::string columnsArray, std::string depthArray, int current_layer, int last_layer)
     {
         //This is the working directory of tomofilt/
-        if ( '$TOMOFILT' == "" ) {
+        std::string tomofilt = string(getenv("TOMOFILT"));
+        if ( tomofilt == "" ) {
             cerr << "Set \"TOMOFILT\" to the directory with the model data, lib and bin dirs\n";
         }
 
@@ -969,26 +972,36 @@ namespace aspect
         //model files such the smth and evc files
         //These are separated into the subdirectories
         //subdirectories $UTILS/SP12RTS, $UTILS/S12RTS, $UTILS/S20RTS and $UTILS/S40RTS
-        std::string tomofilt = string(getenv("TOMOFILT"));
-        std::string UTILS = tomofilt.append("/utils"); //'$TOMOFILT/utils';
+        std::string UTILS = tomofilt + "/utils"; //'$TOMOFILT/utils';
 
         //binaries
-        std::string BINDIR = tomofilt.append("/bin");   //'$TOMOFILT/bin';
+        std::string BINDIR = tomofilt + "/bin";   //'$TOMOFILT/bin';
 
         //Directory with Geodynamics simulations
-        std::string gdir = tomofilt.append("/geodyn");  //'$TOMOFILT/geodyn';
+        std::string gdir = tomofilt + "/geodyn";  //'$TOMOFILT/geodyn';
 
         //Parameters defined here are for the geodynamic simulation
         std::vector<float> depth;     //depth
         std::vector<float> columns;   //lat,lon, dvs array
 
         //Store the vector values in temp files so that the fortran converter can call them
-        std::FILE* depth_file = std::tmpfile();
-        std::fputs(depthArray, depth_file);
+        //  std::FILE* depth_file = std::tmpfile();
+        //  std::fputs(depthArray.c_str(), depth_file);
+        std::ofstream depth_file (gdir + "/netcdf_test/depth_layers.dat");
+        depth_file << depthArray.c_str() << endl;
+        depth_file.close();
 
-        std::FILE* columns_file = std::tmpfile();
-        std::fputs(columnsArray, columns_file);
+        //  std::FILE* columns_file = std::tmpfile();
+        //  (columnsArray.c_str(), columns_file);
+        std::ofstream columns_file (gdir + "/netcdf_test/netcdf_columns.dvs.layer.001.dat");
+        columns_file << columnsArray.c_str() << endl;
+        columns_file.close();
 
+        cout << "running netcdf test" << endl;
+        std::string convertCmd = tomofilt + "/dofilt_ESEP_opendap netcdf_test netcdf_columns 1 3";
+        std::system(convertCmd.c_str());
+
+#if 0
         //degree = 12 for SP12RTS
         int degree = 12;
             cout << "Filtering up to degree " << degree << endl;
@@ -1009,13 +1022,17 @@ namespace aspect
         //Run the reparametrisation for both the dvs and dvp models
         //We assume slice files for both are present in the same directory
         //and that they have the same number of layers
-        foreach name ( ${names}.dvs ${names}.dvp ) {
-            echo "Reparameterising file:" $name
+        //foreach name ( ${names}.dvs ${names}.dvp ) {
+            //echo "Reparameterising file:" $name
 
             //--Step 1a--//
             //Projecting the field parameters into SPH parameterisation
             //Do this for each layer separately
 
+            //std::FILE* inpm = std::tmpfile();
+            //std::FILE* in = std::tmpfile();
+            std::ofstream inpm ("inpm");
+            std::ofstream in ("in");
             //FIXME: I don't think a loop is needed, for Aspect there will only
             //  be one set of calls per request
             //begin with layer "current_layer" (below the crust ...)
@@ -1024,18 +1041,18 @@ namespace aspect
                 num = current_layer;
 
                 //FIXME: concat with this call instead?
-                //out << $gdir/$model/${name}.layer.${num}.dat.rdbuf();
-                cat $gdir/$model/${name}.layer.${num}.dat > out
+                // Or, just use the tmp file dir
+                //out << gdir/model/${name}.layer.${num}.dat.rdbuf();
+                //columns_file->rdbuf() >> out;
+                //cat $gdir/$model/${name}.layer.${num}.dat > out
 
                 //depth range
                 dep1 = depth[current_layer];
                 dep2 = depth[current_layer + 1];
 
-                //number of gridpoints
-                n = `wc -l out | awk '{print $1}'`
-
                 //copy maps into "inpm"
-                cat out | awk '{print $1, $2, $3}' > inpm
+                //std::fputs(columnsArray.c_str(), inpm);
+                inpm << columnsArray.c_str() << endl;
 
                 //make RAW file (... projection into spherical harmonics).
                 //This is only necessary for iz="first_layer", because all the
@@ -1045,31 +1062,30 @@ namespace aspect
                 //mkexpmatxy for each layer separately.
                 //Can be done, but let's assume here that the grids for each layer are the same ....
                 cout << "Running opendap_convert" << endl;
-                inpm       >  in
-                inpm.a     >> in
-                inpm.evc   >> in
-                degree    >> in
+                in << "inpm" << endl;
+                in << "inpm.a" << endl;
+                in << "inpm.evc" << endl;
+                in << degree << endl;
 
-                inpm.raw     >> in
-                regl        >> in
+                in << "inpm.raw" << endl;
+                in << regl << endl;
 
                 //Projecting this layer into the 3D SPH (s12rts/s20rts/s40rts) parameterisation
-                dep1        >> in
-                dep2        >> in
-                inpm.$iz.sph >> in
+                in << dep1 << endl;
+                in << dep2 << endl;
+                in << "inpm." << current_layer << ".sph" << endl;
 
                 //Call the fortran converter program
-                _opendap_convert(columns_file, depth_file, current_layer, last_layer)   < in
+                opendap_convert_("model", "name", current_layer, last_layer) < in;
 
                 current_layer++;
             }
-        }
-
+#endif
         //--Step 1b--//
         //Catting each layer into a single SPH file
 
         //Cat SPH files
-        foreach sph ( inpm.?.sph inpm.??.sph inpm.???.sph ) {
+/*        foreach sph ( inpm.?.sph inpm.??.sph inpm.???.sph ) {
             n = $sph:r:e
             if (n == first_layer)
                 /bin/cp $sph ll.sph
@@ -1093,7 +1109,7 @@ namespace aspect
         //Where $name is both $name_dvs and $name_dvp, resulting in two files.
         end
         endif
-
+*/
     }
 
     /**
@@ -1212,6 +1228,9 @@ namespace aspect
       std::cerr << std::endl;
       std::cerr << "Depth:" << std::endl << depthColumns << std::endl;
 #endif
+
+      //Call the C shell script
+      //std::system("export TOMOFILT=/Users/kodi/src/Aspect/aspect_opendap/contrib/opendap/sph/tomofilt_new_ESEP/; /Users/kodi/src/Aspect/aspect_opendap/contrib/opendap/sph/tomofilt_new_ESEP/dofilt_ESEP_opendap model name 1 3");
 
       //Use 1 as the starting layer. If later on we want the user to be able to change which layer the sph conversion
       // starts at we can add it as a parameter in the prm
