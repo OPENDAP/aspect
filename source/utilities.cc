@@ -980,25 +980,20 @@ namespace aspect
         //Directory with Geodynamics simulations
         std::string gdir = tomofilt + "/geodyn";  //'$TOMOFILT/geodyn';
 
-        //Parameters defined here are for the geodynamic simulation
+        //Parameters defined here are for the geodynamic simulation //FIXME: Looks like this may not be needed
         std::vector<float> depth;     //depth
         std::vector<float> columns;   //lat,lon, dvs array
 
         //Store the vector values in temp files so that the fortran converter can call them
-        //  std::FILE* depth_file = std::tmpfile();
-        //  std::fputs(depthArray.c_str(), depth_file);
         std::ofstream depth_file (gdir + "/netcdf_test/depth_layers.dat");
         depth_file << depthArray.c_str() << endl;
         depth_file.close();
-
-        //  std::FILE* columns_file = std::tmpfile();
-        //  (columnsArray.c_str(), columns_file);
         std::ofstream columns_file (gdir + "/netcdf_test/netcdf_columns.dvs.layer.001.dat");
         columns_file << columnsArray.c_str() << endl;
         columns_file.close();
 
         cout << "running netcdf test" << endl;
-        std::string convertCmd = tomofilt + "/dofilt_ESEP_opendap netcdf_test netcdf_columns 1 3";
+        std::string convertCmd = tomofilt + "/dofilt_ESEP_opendap netcdf_test netcdf_columns 1 " + to_string(last_layer);
         std::system(convertCmd.c_str());
 
 #if 0
