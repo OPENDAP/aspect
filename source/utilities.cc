@@ -960,7 +960,7 @@ namespace aspect
           void opendap_convert_(std::string model, std::string name, int starting_layer, int final_layer);
     }
 
-    std::string sph_conversion(std::string columnsArray, std::string depthArray, int current_layer, int last_layer)
+    void sph_conversion(std::string columnsArray, std::string depthArray, int current_layer, int last_layer)
     {
         //This is the working directory of tomofilt/
         std::string tomofilt = string(getenv("TOMOFILT"));
@@ -1229,7 +1229,7 @@ namespace aspect
 
       //Use 1 as the starting layer. If later on we want the user to be able to change which layer the sph conversion
       // starts at we can add it as a parameter in the prm
-      data_string = sph_conversion(netcdfColumns, depthColumns, 1, depthVector.size());
+      sph_conversion(netcdfColumns, depthColumns, 1, depthVector.size());
     }
 
 //Added a check to read data files from a url
@@ -1253,7 +1253,7 @@ namespace aspect
               // Read the data values for Seismic velocity and organize them according to
               // the 'sph' format. The 'data_string' parameter is modified by the call.
               read_netcdf_sph(filename, data_string);
-              filesize = data_string.size();
+              data_string = "/Users/kodi/src/Aspect/aspect_opendap/contrib/opendap/sph/tomofilt_new_ESEP/geodyn/inpm.SP12.netcdf_columns.dvs.repar.sph";
             }
 
           //----Only run if the user wishes to use the libdap packages----//
@@ -1456,7 +1456,7 @@ namespace aspect
           // Receive and store data
           MPI_Bcast(&data_string[0], filesize, MPI_CHAR, 0, comm);
         }
-
+cout << "TEST" << endl;
       return data_string;
     }
 

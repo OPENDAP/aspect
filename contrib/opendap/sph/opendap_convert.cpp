@@ -1,8 +1,9 @@
-#include <fem.hpp> // Fortran EMulation library of fable module
+//#include <fem.hpp> // Fortran EMulation library of fable module
+#include <string>
 
 namespace opendap_convert {
 
-using namespace fem::major_types;
+using namespace major_types;
 
 void
 ahouse2(...)
@@ -29,7 +30,7 @@ struct common_splhprm
 {
   static const int mxknt = 21;
 
-  arr<float> spknt;
+  float spknt[];
   arr<float, 2> qq0;
   arr<float, 3> qq;
 
@@ -43,7 +44,7 @@ struct common_splhprm
 const int common_splhprm::mxknt;
 
 struct common :
-  fem::common,
+  common,
   common_splhprm
 {
   fem::cmn_sve rspln_sve;
