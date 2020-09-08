@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2011 - 2018 by the authors of the ASPECT code.
+  Copyright (C) 2011 - 2019 by the authors of the ASPECT code.
 
   This file is part of ASPECT.
 
@@ -177,7 +177,7 @@ namespace aspect
         bool use_surface_condition_function;
 
         /**
-         * ParsedFunction: If provided in the inpute file it prescribes
+         * ParsedFunction: If provided in the input file it prescribes
          * (surface pressure(t), surface temperature(t)).
          */
         Functions::ParsedFunction<1> surface_condition_function;

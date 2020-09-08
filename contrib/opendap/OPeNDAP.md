@@ -1,10 +1,21 @@
 
 # The OPeNDAP extension to ASPECT
 
+Provided here is the OPeNDAP client extension for ASPECT. 
+OPeNDAP is both the name of a non-profit organization and the 
+commonly-used name of a protocol which the OPeNDAP organization has 
+developed. The OPeNDAP protocol provides a discipline-neutral means of 
+requesting and providing data across the World Wide Web. OPeNDAP has
+been working with the NSF/EarthCube funded BALTO (Brokered Alignment of 
+Long-Tail Observations and Big Data) project to create a brokering 
+cyberinfrastructure that facilitates access to unique data sources.
+Using the BALTO/OPeNDAP extension of ASPECT will allow the user to query 
+data from remote servers to be read in and used in local computations.
+
 The OPeNDAP client extension to ASPECT has been tested on OSX (10.13,
 10.14) and CentOS 7. It is currently available in source form only. In
 this document you will find a description of the prerequisites for the
-software, how to run the tests we have included and how to make data
+software, how to run the tests we have included, and how to make data
 available from OPeNDAP servers so that ASPECT can use it.
 
 While OPeNDAP makes its own open-source data server (called _Hyrax_),
@@ -18,9 +29,9 @@ PyDAP sites (via Google).
 ## Building the software
 
 To build the OPeNDAP extension to ASPECT, first get or build the
-prerequisites and then then the modified version of ASPECT. The
+prerequisites and compile ASPECT with activated OPenDAP. The
 prerequisites need to be installed before the ASPECT build is
-configured the _cmake_ configuration tool will find them.
+configured so that the _cmake_ configuration tool will find them.
 
 ### Prerequisites
 
@@ -30,7 +41,11 @@ On OSX, the easy way is to use homebrew:
 
 > brew install libdap
 
-Skip down to the section on installing DEAL.II
+The library is also available in Spack, see
+https://spack.readthedocs.io/en/latest/package_list.html#libdap4
+
+If you installed libdap using Spack or homebrew, skip down to
+the next section.
 
 #### Building libdap
 
@@ -67,64 +82,29 @@ need to do this if you've installed a binary version of the library).
 > make
 > sudo make install
 
-### DEAL.II
+### deal.II
 
-To build ASPECT you will also need the DEAL.II library and it's
-dependencies.
-
-#### OSX
-For OSX, go to https://www.dealii.org/ and follow the Download
-button/link to get a pre-built dmg for OSX. To install the binary,
-open the dmg and drag the 'deal.II' icon to the Applications
-directory.
-
-#### CentOS7
-For CentOS 7, Build using _candi_ as per the ASPECT manual. For me that meant 
-getting candi from GitHub (git clone https://github.com/aspect/candi)
-and running
-
-> ./candi.sh --platform=deal.II-toolchain/platforms/supported/centos7.platform
-
-and then following its directions before proceeding with the actual
-build. That meant installing a list of packages:
-
-> sudo yum install patch svn git wget @development-tools gcc-c++ cmake \
-> openmpi openmpi-devel patch  libtool libtool-ltdl libtool-ltdl-devel \
-> lua lua-devel blas blas-devel lapack lapack-devel  doxygen graphviz \
-> graphviz-devel qt-devel
-
-Then get a new shell and run:
-
-> module load mpi/openmpi-x86_64
-
-(apparently the 'module' tcl program is part of @development-tools. You
-need to get a new shell for the command to work.)
-
-Then you need to add the following environment variables to the shell:
-
-> export CC=mpicc; export CXX=mpicxx; export FC=mpif90; export FF=mpif77
-
-Now actually run candi (use "./candi --platform=deal.II-toolchain/platforms
-/supported/centos7.platform" again) this time hitting return when prompted
-to continue (assuming you have done the various things). You will need to
-run candi once, make a list, do the stuff and then run it again.
+To build ASPECT you will also need the deal.II library and it's
+dependencies. as described in the ASPECT manual 
+http://www.math.clemson.edu/~heister/manual.pdf) and the wiki (https://github.com/geodynamics/aspect/wiki/).
 
 ### Compiling ASPECT
 
 The only thing done differently to build the 'OPeNDAP enabled' version
 of ASPECT is to provide information about _libdap_ to cmake when it
-configures the ASPECT build using the LIBDAP\_DIR and
-LIBDAP\_ON options combined with the DEAL\_II\_DIR option as follows:
+configures the ASPECT build using the ASPECT_WITH_LIBDAP option
+(and optionally specify LIBDAP_DIR and LIBDAP_LIB) as follows:
 
 > mkdir build
+>
 > cd build
-> cmake .. -DLIBDAP\_DIR=/usr/local/ -DLIBDAP=ON
->       -DDEAL\_II\_DIR=/Applications/deal.II-9.0.0.app/Contents/Resources/
+>
+> cmake -DLIBDAP_LIB=<libdap location>/build/lib/ -DLIBDAP_DIR=<libdap location>/build/ -DASPECT_WITH_LIBDAP=ON ..
 
-For any platform where you built the dependencies using candi, the 
-DEAL_II_DIR will be the place where candi build the library. Also,
-since CentOS, et c., don't come with MPI, you'll need to follow the 
-directions to get those from yum, rpm, apt-get or build from source.
+Using -DASPECT_WITH_LIBDAP=OFF will make the client go back to running without
+the libdap packaging (but not using libdap packages will make it impossible
+for ASPECT to read data from a url). This option defaults to OFF meaning
+libdap is optional.
 
 ## Running the tests
 
@@ -146,8 +126,4 @@ or
 
 I've used _visit_ to render the simulation runs. It can be found here:
 https://wci.llnl.gov/simulation/computer-codes/visit/.
-
-## Making new data accessible to ASPECT using an OPeNDAP server
-
-## About the modifications
 

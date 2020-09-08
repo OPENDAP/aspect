@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2011 - 2019 by the authors of the ASPECT code.
+  Copyright (C) 2011 - 2020 by the authors of the ASPECT code.
 
   This file is part of ASPECT.
 
@@ -68,6 +68,10 @@ namespace aspect
         iterated_Advection_and_Stokes,
         single_Advection_iterated_Stokes,
         no_Advection_iterated_Stokes,
+        no_Advection_single_Stokes,
+        no_Advection_iterated_defect_correction_Stokes,
+        single_Advection_iterated_defect_correction_Stokes,
+        iterated_Advection_and_defect_correction_Stokes,
         iterated_Advection_and_Newton_Stokes,
         single_Advection_iterated_Newton_Stokes,
         single_Advection_no_Stokes,
@@ -323,6 +327,37 @@ namespace aspect
     };
 
     /**
+     * This enum represents the different choices for the Krylov method
+     * used in the cheap GMG Stokes solve.
+     */
+    struct StokesKrylovType
+    {
+      enum Kind
+      {
+        gmres,
+        idr_s
+      };
+
+      static const std::string pattern()
+      {
+        return "GMRES|IDR(s)";
+      }
+
+      static Kind
+      parse(const std::string &input)
+      {
+        if (input == "GMRES")
+          return gmres;
+        else if (input == "IDR(s)")
+          return idr_s;
+        else
+          AssertThrow(false, ExcNotImplemented());
+
+        return Kind();
+      }
+    };
+
+    /**
      * Constructor. Fills the values of member functions from the given
      * parameter object.
      *
@@ -427,6 +462,8 @@ namespace aspect
     // subsection: Stokes solver parameters
     bool                           use_direct_stokes_solver;
     typename StokesSolverType::Kind stokes_solver_type;
+    typename StokesKrylovType::Kind stokes_krylov_type;
+    unsigned int                    idr_s_parameter;
 
     double                         linear_stokes_solver_tolerance;
     unsigned int                   n_cheap_stokes_solver_steps;
@@ -499,6 +536,7 @@ namespace aspect
      */
     bool                           include_melt_transport;
     bool                           enable_additional_stokes_rhs;
+    bool                           enable_prescribed_dilation;
 
     /**
      * Map from boundary id to a pair "components", "traction boundary type",

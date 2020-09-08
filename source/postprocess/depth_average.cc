@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2011 - 2018 by the authors of the ASPECT code.
+  Copyright (C) 2011 - 2020 by the authors of the ASPECT code.
 
   This file is part of ASPECT.
 
@@ -233,19 +233,18 @@ namespace aspect
                   f << std::endl;
 
                   // Output each data point in the entries object
-                  for (typename std::vector<DataPoint>::const_iterator point = entries.begin();
-                       point != entries.end(); ++point)
+                  for (const auto &point : entries)
                     {
-                      double depth = max_depth/static_cast<double>(point->values[0].size())/2.0;
-                      for (unsigned int d = 0; d < point->values[0].size(); ++d)
+                      double depth = max_depth/static_cast<double>(point.values[0].size())/2.0;
+                      for (unsigned int d = 0; d < point.values[0].size(); ++d)
                         {
                           f << std::setw(12)
-                            << (this->convert_output_to_years() ? point->time/year_in_seconds : point->time)
+                            << (this->convert_output_to_years() ? point.time/year_in_seconds : point.time)
                             << ' ' << std::setw(12) << depth;
                           for ( unsigned int i = 0; i < variables.size(); ++i )
-                            f << ' ' << std::setw(12) << point->values[i][d];
+                            f << ' ' << std::setw(12) << point.values[i][d];
                           f << std::endl;
-                          depth+= max_depth/static_cast<double>(point->values[0].size() );
+                          depth+= max_depth/static_cast<double>(point.values[0].size() );
                         }
                     }
 
@@ -274,7 +273,7 @@ namespace aspect
         prm.enter_subsection("Depth average");
         {
           prm.declare_entry ("Time between graphical output", "1e8",
-                             Patterns::Double (0),
+                             Patterns::Double (0.),
                              "The time interval between each generation of "
                              "graphical output files. A value of zero indicates "
                              "that output should be generated in each time step. "
@@ -306,7 +305,7 @@ namespace aspect
             "all|temperature|composition|"
             "adiabatic temperature|adiabatic pressure|adiabatic density|adiabatic density derivative|"
             "velocity magnitude|sinking velocity|Vs|Vp|"
-            "viscosity|vertical heat flux";
+            "viscosity|vertical heat flux|vertical mass flux";
           prm.declare_entry("List of output variables", "all",
                             Patterns::MultipleSelection(variables.c_str()),
                             "A comma separated list which specifies which quantities to "
@@ -420,6 +419,9 @@ namespace aspect
 
             if ( output_all_variables || std::find( output_variables.begin(), output_variables.end(), "vertical heat flux") != output_variables.end() )
               variables.push_back("vertical_heat_flux");
+
+            if ( output_all_variables || std::find( output_variables.begin(), output_variables.end(), "vertical mass flux") != output_variables.end() )
+              variables.push_back("vertical_mass_flux");
           }
 
           output_formats = Utilities::split_string_list(prm.get("Output format"));

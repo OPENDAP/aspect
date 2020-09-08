@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2016 - 2017 by the authors of the ASPECT code.
+  Copyright (C) 2016 - 2019 by the authors of the ASPECT code.
 
  This file is part of ASPECT.
 
@@ -74,10 +74,9 @@ namespace aspect
 
         if (n_particles > 0)
           {
-            for (typename ParticleHandler<dim>::particle_iterator particle = particle_range.begin();
-                 particle != particle_range.end(); ++particle)
+            for (const auto &particle : particle_range)
               {
-                const ArrayView<const double> &particle_properties = particle->get_properties();
+                const ArrayView<const double> &particle_properties = particle.get_properties();
 
                 for (unsigned int i = 0; i < particle_properties.size(); ++i)
                   if (selected_properties[i])

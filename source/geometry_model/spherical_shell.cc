@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2011 - 2019 by the authors of the ASPECT code.
+  Copyright (C) 2011 - 2020 by the authors of the ASPECT code.
 
   This file is part of ASPECT.
 
@@ -165,25 +165,7 @@ namespace aspect
 
                       this_cell.material_id = cell->material_id();
 
-#if !DEAL_II_VERSION_GTE(9,1,0)
-                      // In deal.II prior to version 9.1, the hyper_ball mesh generated above
-                      // had cells that were inconsistently oriented: Some cells had a normal
-                      // vector that pointed to the inside of the ball, some that pointed
-                      // to the outside. This leads to cells with either negative or
-                      // positive volume if we extrude them in the radial direction. We need
-                      // to fix this up.
 
-                      if (GridTools::cell_measure (points, this_cell.vertices) < 0)
-                        {
-                          if (dim == 2)
-                            std::swap (this_cell.vertices[1], this_cell.vertices[2]);
-                          if (dim == 3)
-                            {
-                              std::swap (this_cell.vertices[1], this_cell.vertices[2]);
-                              std::swap (this_cell.vertices[5], this_cell.vertices[6]);
-                            }
-                        }
-#endif
                       Assert(GridTools::cell_measure (points, this_cell.vertices) > 0, ExcInternalError());
 
                       cells.push_back(this_cell);
@@ -445,7 +427,7 @@ namespace aspect
                   this->get_timestep_number() == 0,
                   ExcMessage("After displacement of the mesh, this function can no longer be used to determine whether a point lies in the domain or not."));
 
-      AssertThrow(dynamic_cast<const InitialTopographyModel::ZeroTopography<dim>*>(&this->get_initial_topography_model()) != nullptr,
+      AssertThrow(Plugins::plugin_type_matches<const InitialTopographyModel::ZeroTopography<dim>>(this->get_initial_topography_model()),
                   ExcMessage("After adding topography, this function can no longer be used to determine whether a point lies in the domain or not."));
 
       const std::array<double, dim> spherical_point = Utilities::Coordinates::cartesian_to_spherical_coordinates(point);
@@ -543,24 +525,24 @@ namespace aspect
                              "radially. This parameter allows the user more control "
                              "over the ratio between radial and lateral refinement of "
                              "the mesh.");
-          prm.declare_entry ("Inner radius", "3481000",  // 6371-2890 in km
-                             Patterns::Double (0),
-                             "Inner radius of the spherical shell. Units: $\\si{m}$. "
+          prm.declare_entry ("Inner radius", "3481000.",  // 6371-2890 in km
+                             Patterns::Double (0.),
+                             "Inner radius of the spherical shell. Units: \\si{\\meter}."
                              "\n\n"
                              "\\note{The default value of 3,481,000 m equals the "
                              "radius of a sphere with equal volume as Earth (i.e., "
                              "6371 km) minus the average depth of the core-mantle "
                              "boundary (i.e., 2890 km).}");
-          prm.declare_entry ("Outer radius", "6336000",  // 6371-35 in km
-                             Patterns::Double (0),
-                             "Outer radius of the spherical shell. Units: $\\si{m}$. "
+          prm.declare_entry ("Outer radius", "6336000.",  // 6371-35 in km
+                             Patterns::Double (0.),
+                             "Outer radius of the spherical shell. Units: \\si{\\meter}."
                              "\n\n"
                              "\\note{The default value of 6,336,000 m equals the "
                              "radius of a sphere with equal volume as Earth (i.e., "
                              "6371 km) minus the average depth of the mantle-crust "
                              "interface (i.e., 35 km).}");
-          prm.declare_entry ("Opening angle", "360",
-                             Patterns::Double (0, 360),
+          prm.declare_entry ("Opening angle", "360.",
+                             Patterns::Double (0., 360.),
                              "Opening angle in degrees of the section of the shell "
                              "that we want to build. "
                              "The only opening angles that are allowed for "

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2011 - 2019 by the authors of the ASPECT code.
+  Copyright (C) 2011 - 2020 by the authors of the ASPECT code.
 
   This file is part of ASPECT.
 
@@ -21,14 +21,12 @@
 #include <aspect/utilities.h>
 #include <aspect/simulator_access.h>
 
-#ifdef HAVE_LIBDAP
+#ifdef ASPECT_WITH_LIBDAP
 #include <D4Connect.h>
 #include <Connect.h>
 #include <Response.h>
 #include <Array.h>
 #endif
-
-#include <netcdf.h>
 
 #include <array>
 #include <deal.II/base/point.h>
@@ -43,9 +41,11 @@
 
 
 #include <aspect/geometry_model/box.h>
+#include <aspect/geometry_model/two_merged_boxes.h>
 #include <aspect/geometry_model/spherical_shell.h>
 #include <aspect/geometry_model/sphere.h>
 #include <aspect/geometry_model/chunk.h>
+#include <aspect/geometry_model/initial_topography_model/ascii_data.h>
 
 #include <fstream>
 #include <string>
@@ -96,238 +96,237 @@ namespace aspect
       return input_table;
     }
 
+    namespace
+    {
+      // This is a helper function used in parse_map_to_double_array below.
+      // It takes an input_string that is expected to follow the input format
+      // explained in the documentation of the parse_map_to_double_array function
+      // and parses it into a multimap, only performing rudimentary error checking
+      // for correct formatting.
+      std::multimap<std::string, double>
+      parse_string_to_map (const std::string &input_string,
+                           const std::vector<std::string> &list_of_keys,
+                           const std::string &property_name)
+      {
+        std::multimap<std::string, double> parsed_map;
+
+        if (Patterns::Map(Patterns::Anything(),
+                          Patterns::List(Patterns::Double(),
+                                         0,
+                                         std::numeric_limits<unsigned int>::max(),
+                                         "|")).match(input_string))
+          {
+            // Split the list by comma delimited components.
+            const std::vector<std::string> field_entries = dealii::Utilities::split_string_list(input_string, ',');
+
+            for (const auto &field_entry : field_entries)
+              {
+                // Split each entry into string and value ( <id> : <value>)
+                std::vector<std::string> key_and_value = Utilities::split_string_list (field_entry, ':');
+
+                // Ensure that each entry has the correct form.
+                AssertThrow (key_and_value.size() == 2,
+                             ExcMessage ("The format for mapped "
+                                         + property_name
+                                         + "requires that each entry has the "
+                                         "form `<key> : <value>' "
+                                         ", but the entry <"
+                                         + field_entry
+                                         + "> does not appear to follow this pattern."));
+
+                // Handle special key "all", which must be the only entry if found
+                if (key_and_value[0] == "all")
+                  {
+                    AssertThrow (field_entries.size() == 1,
+                                 ExcMessage ("The keyword `all' in the property "
+                                             + property_name
+                                             + " is only allowed if there is no other "
+                                             "keyword."));
+
+                    const std::vector<std::string> values = dealii::Utilities::split_string_list(key_and_value[1], '|');
+
+                    // Assign all the values to all fields
+                    for (const std::string &key: list_of_keys)
+                      for (const std::string &value : values)
+                        {
+                          parsed_map.emplace(key, Utilities::string_to_double(value));
+                        }
+                  }
+                // Handle lists of multiple unique entries
+                else
+                  {
+                    AssertThrow (parsed_map.find(key_and_value[0]) == parsed_map.end(),
+                                 ExcMessage ("The keyword <"
+                                             + key_and_value[0]
+                                             + "> in "
+                                             + property_name
+                                             + " is listed multiple times. "
+                                             "Check that you have only one value for "
+                                             "each field id in your list."));
+
+                    const std::vector<std::string> values = dealii::Utilities::split_string_list(key_and_value[1], '|');
+
+                    for (const auto &value : values)
+                      {
+                        parsed_map.emplace(key_and_value[0],Utilities::string_to_double(value));
+                      }
+                  }
+              }
+          }
+        else if (Patterns::List(Patterns::Double(),1,list_of_keys.size()).match(input_string))
+          {
+            // Handle the format of a comma separated list of doubles, with no keywords
+            const std::vector<double> values = possibly_extend_from_1_to_N (dealii::Utilities::string_to_double(dealii::Utilities::split_string_list(input_string)),
+                                                                            list_of_keys.size(),
+                                                                            property_name);
+
+            for (unsigned int i=0; i<values.size(); ++i)
+              {
+                // list_of_keys and values have the same length, which is guaranteed by the
+                // call to possibly_extend_from_1_to_N() above
+                parsed_map.emplace(list_of_keys[i],values[i]);
+              }
+          }
+        else
+          {
+            // No Patterns matches were found!
+            AssertThrow (false,
+                         ExcMessage ("The required format for property <"
+                                     + property_name
+                                     + "> was not found. Specify a comma separated "
+                                     + "list of `<double>' or `<key1> : <double>|<double>|..., "
+                                     + "<key2> : <double>|... , ... '."));
+          }
+
+        return parsed_map;
+      }
+    }
 
 
     std::vector<double>
     parse_map_to_double_array (const std::string &input_string,
                                const std::vector<std::string> &list_of_keys,
-                               const bool has_background_field,
+                               const bool expects_background_field,
                                const std::string &property_name,
                                const bool allow_multiple_values_per_key,
-                               std::shared_ptr<std::vector<unsigned int> > n_values_per_key)
+                               const std::shared_ptr<std::vector<unsigned int> > &n_values_per_key,
+                               const bool allow_missing_keys)
     {
       std::vector<std::string> field_names = list_of_keys;
-      if (has_background_field)
+      if (expects_background_field)
         field_names.insert(field_names.begin(),"background");
-
       const unsigned int n_fields = field_names.size();
-      std::vector<double> return_values;
 
-      const bool check_structure = (n_values_per_key && n_values_per_key->size() != 0);
-      const bool store_structure = (n_values_per_key && n_values_per_key->size() == 0);
+      // First: parse the string into a map depending on what Pattern we are dealing with
+      std::multimap<std::string, double> parsed_map = parse_string_to_map(input_string,
+                                                                          field_names,
+                                                                          property_name);
 
-      if (store_structure)
-        n_values_per_key->resize(n_fields,0);
+      // Second: Now check that the structure of the map is as expected
+      {
+        const bool check_structure = (n_values_per_key && n_values_per_key->size() != 0);
+        const bool store_structure = (n_values_per_key && n_values_per_key->size() == 0);
+        std::vector<unsigned int> values_per_key(n_fields, 0);
 
-      if (check_structure)
-        AssertThrow(n_values_per_key->size() == n_fields,
-                    ExcMessage("When providing an expected structure for input parameter " + property_name + " you need to provide "
-                               + "as many entries in the structure vector as there are input field names (+1 if there is a background field). "
-                               + "The current structure vector has " + std::to_string(n_values_per_key->size()) + " entries, but there are "
-                               + std::to_string(n_fields) + " field names." ));
+        if (check_structure)
+          AssertThrow(n_values_per_key->size() == n_fields,
+                      ExcMessage("When providing an expected structure for input parameter " + property_name + " you need to provide "
+                                 + "as many entries in the structure vector as there are input field names (+1 if there is a background field). "
+                                 + "The current structure vector has " + std::to_string(n_values_per_key->size()) + " entries, but there are "
+                                 + std::to_string(n_fields) + " field names." ));
 
-      const auto key_pattern = (allow_multiple_values_per_key)
-                               ?
-                               Patterns::List(Patterns::Double(),
-                                              1,
-                                              std::numeric_limits<unsigned int>::max(),
-                                              "|")
-                               :
-                               Patterns::Double();
+        for (const std::pair<const std::string, double> &key_and_value: parsed_map)
+          {
+            const std::vector<std::string>::iterator field_name =
+              std::find(field_names.begin(),field_names.end(),key_and_value.first);
 
-      // Parse the string depending on what Pattern we are dealing with
-      if (Patterns::Map(Patterns::Anything(),
-                        key_pattern,
-                        1,
-                        n_fields).match(input_string))
-        {
-          std::vector<std::vector<double> > return_map(n_fields,std::vector<double> ());
+            // Ensure that each key is in the list of field names
+            AssertThrow (field_name != field_names.end(),
+                         ExcMessage ("The keyword <" + key_and_value.first + "> in "
+                                     + property_name + " does not match any entries "
+                                     "from the list of field names"
+                                     + ((expects_background_field)
+                                        ?
+                                        " (plus `background' for the background field). "
+                                        :
+                                        ". ")
+                                     + "Check that you only use valid names.\n\n"
+                                     "One example of where to check this is if "
+                                     "Compositional fields are used, "
+                                     "then check the id list "
+                                     "from `set Names of fields' in the "
+                                     "Compositional fields subsection. "
+                                     "Alternatively, if `set Names of fields' "
+                                     "is not set, the default names are "
+                                     "C_1, C_2, ..., C_n."));
 
-          // Split the list by comma delimited components,
-          // then by colon delimited field name and value.
-          const std::vector<std::string> field_entries = dealii::Utilities::split_string_list(input_string, ',');
+            const unsigned int field_index = std::distance(field_names.begin(), field_name);
+            values_per_key[field_index] += 1;
+          }
 
-          AssertThrow ( (field_entries.size() == n_fields)
-                        || (field_entries.size() == 1),
-                        ExcMessage ("The number of "
-                                    + property_name
-                                    + " in the list must equal one of the following values:\n"
-                                    "1 (one value for all fields, including background, using the keyword=`all'), \n"
-                                    "or " + std::to_string(n_fields) + " (the number of fields, possibly plus 1 if a background field is expected)."));
+        if (store_structure)
+          *n_values_per_key = values_per_key;
 
-          // Parse by entry
-          for (const auto &field_entry : field_entries)
-            {
-              // Split each entry into string and value ( <id> : <value>)
-              std::vector<std::string> key_and_value = Utilities::split_string_list (field_entry, ':');
-
-              // Ensure that each entry has the correct form.
-              AssertThrow (key_and_value.size() == 2,
-                           ExcMessage ("The format for mapped "
+        unsigned int field_index = 0;
+        for (const unsigned int &n_values: values_per_key)
+          {
+            if (allow_multiple_values_per_key == false)
+              AssertThrow (n_values <= 1,
+                           ExcMessage ("The keyword <"
+                                       + field_names[field_index]
+                                       + "> in "
                                        + property_name
-                                       + "requires that each entry has the "
-                                       "form `<id> : <value>' "
-                                       ", but the entry <"
-                                       + field_entry
-                                       + "> does not appear to follow this pattern."));
+                                       + " has multiple values, which is unexpected. "
+                                       "Check that you have only one value for "
+                                       "each field id in your list."));
 
-              // If there is one entry in the list the keyword "all" must be found.
-              if ((field_entries.size() == 1) && (n_fields != 1))
-                {
-                  AssertThrow (key_and_value[0] == "all",
-                               ExcMessage ("There is only one "
-                                           + property_name
-                                           + " value given. The keyword `all' is "
-                                           "expected but is not found. Please "
-                                           "check your "
-                                           + property_name
-                                           + " list."));
+            if (allow_missing_keys == false)
+              AssertThrow (n_values > 0,
+                           ExcMessage ("The keyword <"
+                                       + field_names[field_index]
+                                       + "> in "
+                                       + property_name
+                                       + " is not listed, although it is expected. "
+                                       "Check that you have at least one value for "
+                                       "each field id in your list (possibly plus "
+                                       "`background` if a background field is expected "
+                                       "for this property)."));
 
-                  const std::vector<std::string> values = dealii::Utilities::split_string_list(key_and_value[1], '|');
+            if (check_structure)
+              {
+                AssertThrow(((*n_values_per_key)[field_index] == n_values || n_values == 1),
+                            ExcMessage("The key <" + field_names[field_index] + "> in <"+ property_name + "> does not have "
+                                       + "the expected number of values. It expects " + std::to_string((*n_values_per_key)[field_index])
+                                       + "or 1 values, but we found " + std::to_string(n_values) + " values."));
+                if (n_values == 1)
+                  {
+                    const std::string field_name = field_names[field_index];
+                    const double field_value = parsed_map.find(field_name)->second;
+                    for (unsigned int i=1; i<(*n_values_per_key)[field_index]; ++i)
+                      parsed_map.emplace(field_name, field_value);
+                  }
+              }
 
-                  // Assign all the elements to the "all" value
-                  for (unsigned int field_index=0; field_index<n_fields; ++field_index)
-                    {
-                      for (const auto &value : values)
-                        {
-                          return_map[field_index].push_back(Utilities::string_to_double(value));
+            ++field_index;
+          }
+      }
 
-                          if (store_structure)
-                            ++(*n_values_per_key)[field_index];
-                        }
-
-                      if (check_structure)
-                        AssertThrow((*n_values_per_key)[field_index] == values.size(),
-                                    ExcMessage("The key <" + key_and_value[0] + "> in <"+ property_name + "> does not have "
-                                               + "the expected number of values. It expects " + std::to_string((*n_values_per_key)[field_index])
-                                               + " values, but we found " + std::to_string(values.size()) + " values."));
-                    }
-                }
-              // Handle lists of multiple entries
-              else
-                {
-                  // Ensure that the special keyword "all" was not used when multiple entries exist.
-                  AssertThrow (key_and_value[0] != "all" || n_fields == 1,
-                               ExcMessage ("There are multiple "
-                                           + property_name
-                                           + " values found, the keyword `all' is not "
-                                           "allowed. Please check your "
-                                           + property_name
-                                           + " list."));
-
-                  // Continue with placing values into the correct positions according to
-                  // the order of names passed to this function in the argument list_of_field_names.
-                  std::vector<std::string>::iterator field_name
-                    = std::find(field_names.begin(),field_names.end(),key_and_value[0]);
-
-                  // Ensure that each non-special keyword found is also contained in
-                  // the list of field names, and insert the associated
-                  // values to the correct index position.
-                  AssertThrow (field_name != field_names.end(),
-                               ExcMessage ("The keyword <"
-                                           + key_and_value[0]
-                                           + "> in "
-                                           + property_name
-                                           + " does not match any entries "
-                                           "from the list of field names"
-                                           + ((has_background_field)
-                                              ?
-                                              " (plus `background' for the background field). "
-                                              :
-                                              ". ")
-                                           + "Check that you have a value for "
-                                           "each field id in your list.\n\n"
-                                           "One example of where to check this is if "
-                                           "Compositional fields are used, "
-                                           "then check the id list "
-                                           "from `set Names of fields' in the "
-                                           "Compositional fields subsection. "
-                                           "Alternatively, if `set Names of fields' "
-                                           "is not set, the default names are "
-                                           "C_1, C_2, ..., C_n."));
-
-                  const unsigned int field_index = std::distance(field_names.begin(),field_name);
-
-                  // Throw an error if this index was already set ...there can be only one
-                  AssertThrow (return_map[field_index].size() == 0,
-                               ExcMessage ("The keyword <"
-                                           + key_and_value[0]
-                                           + "> in "
-                                           + property_name
-                                           + " is listed multiple times. "
-                                           "Check that you have only one value for "
-                                           "each field id in your list."
-                                           "\n\n"
-                                           "One example of where to check this is if "
-                                           "Compositional fields are used, "
-                                           "then check the id list "
-                                           "from `set Names of fields' in the "
-                                           "Compositional fields subsection. "
-                                           "Alternatively, if `set Names of fields' "
-                                           "is not set, the default names are "
-                                           "C_1, C_2, ..., C_n."));
-
-                  const std::vector<std::string> values = dealii::Utilities::split_string_list(key_and_value[1], '|');
-
-                  for (const auto &value : values)
-                    {
-                      return_map[field_index].push_back(Utilities::string_to_double(value));
-
-                      if (store_structure)
-                        ++(*n_values_per_key)[field_index];
-                    }
-
-                  if (check_structure)
-                    AssertThrow((*n_values_per_key)[field_index] == values.size(),
-                                ExcMessage("The key <" + key_and_value[0] + "> in <"+ property_name + "> does not have "
-                                           + "the expected number of values. It expects " + std::to_string((*n_values_per_key)[field_index])
-                                           + " values, but we found " + std::to_string(values.size()) + " values."));
-                }
-            }
-
-          for (const auto &entry: return_map)
-            for (const auto &sub_entry: entry)
-              return_values.push_back(sub_entry);
-        }
-      else if (Patterns::List(Patterns::Double(),1,n_fields).match(input_string))
+      // Finally: Convert the map into a vector of doubles, sorted in the order
+      // of the field_names input parameter
+      std::vector<double> return_values;
+      for (const std::string &field_name: field_names)
         {
-          // Handle the format of a comma separated list of doubles, with no keywords
-          return_values = possibly_extend_from_1_to_N (dealii::Utilities::string_to_double(dealii::Utilities::split_string_list(input_string)),
-                                                       n_fields,
-                                                       property_name);
+          const std::pair<std::multimap<std::string, double>::const_iterator,
+                std::multimap<std::string, double>::const_iterator> entry_range = parsed_map.equal_range(field_name);
 
-          if (store_structure)
-            {
-              for (unsigned int i=0; i<n_fields; ++i)
-                (*n_values_per_key)[i] = 1;
-            }
-
-          if (check_structure)
-            {
-              for (unsigned int i=0; i<n_fields; ++i)
-                AssertThrow((*n_values_per_key)[i] == 1,
-                            ExcMessage("The input parameter " + property_name + " seems to consist of a list "
-                                       "of doubles. In this case we only allow a single value per provided key, but the "
-                                       "assumed structure that was provided to the function expects " + std::to_string((*n_values_per_key)[i]) +
-                                       " values for key " + field_names[i] + ". To specify more than one value per field for this input parameter, "
-                                       "you need to use the format " + field_names[i] + ":value1|value2|..."));
-            }
-        }
-      else
-        {
-          // No Patterns matches were found!
-          AssertThrow (false,
-                       ExcMessage ("The required format for field <"
-                                   + property_name
-                                   + "> was not found. Specify a comma separated "
-                                   + "list of `<double>' or `<key1> : <double>|<double>|..., "
-                                   + "<key2> : <double>|... , ... '."));
+          for (auto entry = entry_range.first; entry != entry_range.second; ++entry)
+            return_values.push_back(entry->second);
         }
       return return_values;
     }
 
 
-
+#if !DEAL_II_VERSION_GTE(9,2,0)
     /**
      * Split the set of DoFs (typically locally owned or relevant) in @p whole_set into blocks
      * given by the @p dofs_per_block structure.
@@ -347,6 +346,7 @@ namespace aspect
           start += dofs_per_block[i];
         }
     }
+#endif
 
     template <int dim>
     std::vector<std::string>
@@ -949,8 +949,16 @@ namespace aspect
     }
 
 
-    //Added a check to read data files from a url
-    //Author: Kodi Neumiller 10/9/18
+    bool
+    filename_is_url(const std::string &filename)
+    {
+      if (filename.find("http://") == 0 || filename.find("https://") == 0 || filename.find("file://") == 0)
+        return true;
+      else
+        return false;
+    }
+
+
     std::string
     read_and_distribute_file_content(const std::string &filename,
                                      const MPI_Comm &comm)
@@ -963,207 +971,169 @@ namespace aspect
           // set file size to an invalid size (signaling an error if we can not read it)
           unsigned int filesize = numbers::invalid_unsigned_int;
 
+          // Check to see if the prm file will be reading data from disk or
+          // from a provided URL
+          if (filename_is_url(filename))
+            {
+#ifdef ASPECT_WITH_LIBDAP
+              libdap::Connect *url = new libdap::Connect(filename);
+              libdap::BaseTypeFactory factory;
+              libdap::DataDDS dds(&factory);
+              libdap::DAS das;
 
-	  //----Only run if the user wishes to use the libdap packages----//
-#ifdef HAVE_LIBDAP
-	  //Check to see if the prm file will be reading data from the disk or
-	  // from a provided URL
-	  if (filename.find("http://") == 0 || filename.find("https://") == 0 || filename.find("file://") == 0) 
-	    {
-	      libdap::Connect *url = 0;
-	      url = new libdap::Connect(filename);
-	      libdap::BaseTypeFactory factory;
-	      libdap::DataDDS dds(&factory);
-	      libdap::DAS das;
-
-	      url->request_data(dds, "");
-	      url->request_das(das);
+              url->request_data(dds, "");
+              url->request_das(das);
 
 
-	      //Array to store the url data
-	      libdap::Array *urlArray;
+              // Temporary vector that will hold the different arrays stored in urlArray
+              std::vector<std::string> tmp;
+              // Vector that will hold the arrays (columns) and the values within those arrays
+              std::vector<std::vector<std::string>> columns;
 
-	      //Temporary vector that will hold the different arrays stored in urlArray
-	      std::vector<std::string> tmp;
-	      //Vector that will hold the arrays (columns) and the values within those arrays
-	      std::vector<std::vector<std::string>> columns;
+              // Check dds values to make sure the arrays are of the same length and of type string
+              for (libdap::DDS::Vars_iter i = dds.var_begin(); i != dds.var_end(); ++i)
+                {
+                  libdap::BaseType *btp = *i;
+                  if ((*i)->type() == libdap::dods_array_c)
+                    {
+                      // Array to store the url data
+                      libdap::Array *urlArray;
+                      urlArray = static_cast <libdap::Array *>(btp);
+                      if (urlArray->var() != nullptr && urlArray->var()->type() == libdap::dods_str_c)
+                        {
+                          // The url Array contains a separate array for each column of data.
+                          // This will put each of these individual arrays into its own vector.
+                          urlArray->value(tmp);
+                          columns.push_back(tmp);
+                        }
+                      else
+                        {
+                          AssertThrow (false,
+                                       ExcMessage (std::string("Error when reading from url: ") + filename +
+                                                   " Check your connection to the server and make sure the server "
+                                                   "delivers correct data."));
+                        }
 
+                    }
+                  else
+                    {
+                      AssertThrow (false,
+                                   ExcMessage (std::string("Error when reading from url: ") + filename +
+                                               " Check your connection to the server and make sure the server "
+                                               "delivers correct data."));
+                    }
+                }
 
-	      //Check dds values to make sure the arrays are of the same length and of type string
-	      for (libdap::DDS::Vars_iter i = dds.var_begin(); i != dds.var_end(); i++) 
-		{
-		  libdap::BaseType *btp = *i;
-		  if ((*i)->type() == libdap::dods_array_c) 
-		    {
-		      urlArray = static_cast <libdap::Array *>(btp);
-		      if (urlArray->var() != NULL && urlArray->var()->type() == libdap::dods_str_c) 
-			{
-			  //The url Array contains a separate array for each column of data.
-			  // This will put each of these individual arrays into its own vector.
-			  urlArray->value(tmp);
-			  columns.push_back(tmp);
+              // Add the POINTS data that is required and found at the top of the data file.
+              // The POINTS values are set as attributes inside a table.
+              // Loop through the Attribute table to locate the points values within
+              std::vector<std::string> points;
+              for (libdap::AttrTable::Attr_iter i = das.var_begin(); i != das.var_end(); i++)
+                {
+                  libdap::AttrTable *table;
 
-			}
-		      else 
-			{
-			  AssertThrow (false,
-				       ExcMessage (std::string("Error when reading from url: ") + filename +
-						   " Maybe it was not of the correct type?"));
-			}
+                  table = das.get_table(i);
+                  if (table->get_attr("points") != "")
+                    points.push_back(table->get_attr("points"));
+                }
 
-		    }
-		  else 
-		    {
-		      AssertThrow (false,
-				   ExcMessage (std::string("Error when reading from url: ") + filename +
-					       " Maybe it was not of the correct type?"));
-		    }
-		}
+              std::stringstream urlString;
 
+              // Append the gathered POINTS in the proper format:
+              // "# POINTS: <val1> <val2> <val3>"
+              urlString << "# POINTS:";
+              for (unsigned int i = 0; i < points.size(); i++)
+                {
+                  urlString << " " << points[i];
+                }
+              urlString << "\n";
 
-	      //Add the POINTS data that is required and found at the top of the data file.
-	      // The POINTS values are set as attributes inside a table.
-	      // Loop through the Attribute table to locate the points values within
-	      std::vector<std::string> points;
-	      libdap::AttrTable *table;
-	      for (libdap::AttrTable::Attr_iter i = das.var_begin(); i != das.var_end(); i++) 
-		{
-		  table = das.get_table(i);
-		  if (table->get_attr("points") != "")
-		    points.push_back(table->get_attr("points"));
-		  else
-		    break;
-		}
+              // Add the values from the arrays into the stringstream. The values are passed in
+              // per row with a character return added at the end of each row.
+              // TODO: Add a check to make sure that each column is the same size before writing
+              //     to the stringstream
+              for (unsigned int i = 0; i < tmp.size(); i++)
+                {
+                  for (unsigned int j = 0; j < columns.size(); j++)
+                    {
+                      urlString << columns[j][i];
+                      urlString << " ";
+                    }
+                  urlString << "\n";
+                }
 
-	      //Append the gathered POINTS in the proper format:
-	      // "# POINTS: <val1> <val2> <val3>"
-	      urlString << "# POINTS:";
-	      for (unsigned int i = 0; i < points.size(); i++) 
-		{
-		  urlString << " " << points[i];
-		}
-	      urlString << "\n";
+              data_string = urlString.str();
+              filesize = data_string.size();
 
-	      //Add the values from the arrays into the stringstream. The values are passed in
-	      // per row with a character return added at the end of each row.
-	      // TODO: Add a check to make sure that each column is the same size before writing
-	      //		 to the stringstream
-	      for (unsigned int i = 0; i < tmp.size(); i++) 
-		{
-		  for (unsigned int j = 0; j < columns.size(); j++) 
-		    {
-		      urlString << columns[j][i];
-		      urlString << " ";
-		    }
-		  urlString << "\n";
-		}
+              delete url;
+#else // ASPECT_WITH_LIBDAP
 
+              // broadcast failure state, then throw
+              const int ierr = MPI_Bcast(&filesize, 1, MPI_UNSIGNED, 0, comm);
+              AssertThrowMPI(ierr);
+              AssertThrow(false,
+                          ExcMessage(std::string("Reading of file ") + filename + " failed. " +
+                                     "Make sure you have the dependencies for reading a url " +
+                                     "(run cmake with -DASPECT_WITH_LIBDAP=ON)"));
 
-	      //--May need a second dds
-	      //url->request_data(dds, "");
+#endif // ASPECT_WITH_LIBDAP
+            }
+          else
+            {
+              std::ifstream filestream(filename.c_str());
 
-
-	      data_string = urlString.str();
-	      filesize = data_string.size();
-	    }
-
-	  else
-	    {
-	      std::ifstream filestream(filename.c_str());
-
-	      if (!filestream)
-		{
-		  // broadcast failure state, then throw
-		  MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
-		  AssertThrow (false,
-			       ExcMessage (std::string("Could not open file <") + filename + ">."));
-		  return data_string; // never reached
-		}
-
-
-	      // Read data from disk
-	      std::stringstream datastream;
-	      filestream >> datastream.rdbuf();
-
-	      if (!filestream.eof())
-		{
-		  // broadcast failure state, then throw
-		  MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
-		  AssertThrow (false,
-			       ExcMessage (std::string("Reading of file ") + filename + " finished " +
-					   "before the end of file was reached. Is the file corrupted or"
-					   "too large for the input buffer?"));
-		  return data_string; // never reached
-		}
+              if (!filestream)
+                {
+                  // broadcast failure state, then throw
+                  const int ierr = MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
+                  AssertThrowMPI(ierr);
+                  AssertThrow (false,
+                               ExcMessage (std::string("Could not open file <") + filename + ">."));
+                  return data_string; // never reached
+                }
 
 
+              // Read data from disk
+              std::stringstream datastream;
+              filestream >> datastream.rdbuf();
 
-	      data_string = datastream.str();
-	      filesize = data_string.size();
-	    }
+              if (!filestream.eof())
+                {
+                  // broadcast failure state, then throw
+                  const int ierr = MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
+                  AssertThrowMPI(ierr);
+                  AssertThrow (false,
+                               ExcMessage (std::string("Reading of file ") + filename + " finished " +
+                                           "before the end of file was reached. Is the file corrupted or"
+                                           "too large for the input buffer?"));
+                  return data_string; // never reached
+                }
 
-	  // Distribute data_size and data across processes
-	  MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
-	  MPI_Bcast(&data_string[0],filesize,MPI_CHAR,0,comm);
-#else // HAVE_LIBDAP
-	  if (filename.find("http://") == 0 || filename.find("https://") == 0 || filename.find("file://") == 0) 
-	    {
-	      // broadcast failure state, then throw
-	      MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
-	      AssertThrow (false,
-			   ExcMessage (std::string("Reading of file ") + filename + " failed. " +
-				       "Make sure you have the dependencies for reading a url " +
-				       "(when running cmake make sure -DLIBDAP_ON=ON)"));
-	      return data_string; // never reached
-	    }
+              data_string = datastream.str();
+              filesize = data_string.size();
+            }
 
-	  std::ifstream filestream(filename.c_str());
-
-	  if (!filestream)
-	    {
-	      // broadcast failure state, then throw
-	      MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
-	      AssertThrow (false,
-			   ExcMessage (std::string("Could not open file <") + filename + ">."));
-	      return data_string; // never reached
-	    }
-
-	  // Read data from disk
-	  std::stringstream datastream;
-	  filestream >> datastream.rdbuf();
-
-	  if (!filestream.eof())
-	    {
-	      // broadcast failure state, then throw
-	      MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
-	      AssertThrow (false,
-			   ExcMessage (std::string("Reading of file ") + filename + " finished " +
-				       "before the end of file was reached. Is the file corrupted or"
-				       "too large for the input buffer?"));
-	      return data_string; // never reached
-	    }
-
-	  data_string = datastream.str();
-	  filesize = data_string.size();
-
-	  // Distribute data_size and data across processes
-	  MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
-	  MPI_Bcast(&data_string[0],filesize,MPI_CHAR,0,comm);
-#endif // HAVE_LIBDAP
+          // Distribute data_size and data across processes
+          int ierr = MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
+          AssertThrowMPI(ierr);
+          ierr = MPI_Bcast(&data_string[0],filesize,MPI_CHAR,0,comm);
+          AssertThrowMPI(ierr);
         }
 
       else
         {
           // Prepare for receiving data
           unsigned int filesize;
-          MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
+          int ierr = MPI_Bcast(&filesize,1,MPI_UNSIGNED,0,comm);
+          AssertThrowMPI(ierr);
           if (filesize == numbers::invalid_unsigned_int)
             throw QuietException();
 
           data_string.resize(filesize);
 
           // Receive and store data
-          MPI_Bcast(&data_string[0],filesize,MPI_CHAR,0,comm);
+          ierr = MPI_Bcast(&data_string[0],filesize,MPI_CHAR,0,comm);
+          AssertThrowMPI(ierr);
         }
 
       return data_string;
@@ -1229,7 +1199,8 @@ namespace aspect
               error = closedir(output_directory);
             }
           // Broadcast error code
-          MPI_Bcast (&error, 1, MPI_INT, 0, comm);
+          const int ierr = MPI_Bcast (&error, 1, MPI_INT, 0, comm);
+          AssertThrowMPI(ierr);
           AssertThrow (error == 0,
                        ExcMessage (std::string("Can't create the output directory at <") + pathname + ">"));
         }
@@ -1237,7 +1208,8 @@ namespace aspect
         {
           // Wait to receive error code, and throw QuietException if directory
           // creation has failed
-          MPI_Bcast (&error, 1, MPI_INT, 0, comm);
+          const int ierr = MPI_Bcast (&error, 1, MPI_INT, 0, comm);
+          AssertThrowMPI(ierr);
           if (error!=0)
             throw aspect::QuietException();
         }
@@ -1758,11 +1730,108 @@ namespace aspect
       return maximum_component_value[component];
     }
 
+
+
+    template <int dim>
+    void
+    AsciiDataLookup<dim>::reinit(const std::vector<std::string> &column_names,
+                                 const std::vector<std::vector<double>> &coordinate_values_,
+                                 const std::vector<Table<dim,double> > &raw_data)
+    {
+      Assert(coordinate_values_.size()==dim, ExcMessage("Invalid size of coordinate_values."));
+      for (unsigned int d=0; d<dim; ++d)
+        {
+          coordinate_values[d] = coordinate_values_[d];
+          AssertThrow(coordinate_values[d].size()>1,
+                      ExcMessage("Error: At least 2 entries per coordinate direction are required."));
+          table_points[d] = coordinate_values_[d].size();
+        }
+
+      components = column_names.size();
+      data_component_names = column_names;
+      Assert(raw_data.size() == components,
+             ExcMessage("Error: Incorrect number of columns specified."));
+
+      // compute maximum_component_value for each component:
+      maximum_component_value = std::vector<double>(components,-std::numeric_limits<double>::max());
+      for (unsigned int c=0; c<components; ++c)
+        {
+          Assert(raw_data[c].size() == table_points,
+                 ExcMessage("Error: One of the data tables has an incorrect size."));
+
+          const unsigned int n_elements = raw_data[c].n_elements();
+          for (unsigned int idx=0; idx<n_elements; ++idx)
+            maximum_component_value[c] = std::max(maximum_component_value[c], raw_data[c](
+                                                    compute_table_indices(table_points, idx)));
+        }
+
+      // In case the data is specified on a grid that is equidistant
+      // in each coordinate direction, we only need to store
+      // (besides the data) the number of intervals in each direction and
+      // the begin- and endpoints of the coordinates.
+      // In case the grid is not equidistant, we need to keep
+      // all the coordinates in each direction, which is more costly.
+      std::array<unsigned int,dim> table_intervals;
+
+      coordinate_values_are_equidistant = true;
+      for (unsigned int d=0; d<dim; ++d)
+        {
+          table_intervals[d] = table_points[d]-1;
+
+          // The minimum and maximum coordinate values:
+          grid_extent[d].first = coordinate_values[d][0];
+          grid_extent[d].second = coordinate_values[d][table_points[d]-1];
+
+          const double grid_spacing = coordinate_values[d][1] - coordinate_values[d][0];
+
+          for (unsigned int n = 1; n < table_points[d]; ++n)
+            {
+              const double current_grid_spacing = coordinate_values[d][n] - coordinate_values_[d][n-1];
+
+              AssertThrow(current_grid_spacing > 0.0,
+                          ExcMessage ("Coordinates in dimension "
+                                      + Utilities::int_to_string(d)
+                                      + " are not strictly ascending."));
+
+              // If spacing between coordinates changed (with a relative
+              // tolerance), keep track of that information.  Note that we do
+              // not break out of this loop in this case but run through the
+              // whole array, so that the AssertThrow above is executed for
+              // each entry to ensure increasing coordinate values.
+              if (std::abs(current_grid_spacing - grid_spacing) > 0.005*(current_grid_spacing+grid_spacing))
+                coordinate_values_are_equidistant = false;
+            }
+        }
+
+      // For each data component, set up a GridData,
+      // its type depending on the read-in grid.
+      data.resize(components);
+      for (unsigned int c = 0; c < components; ++c)
+        {
+          if (coordinate_values_are_equidistant)
+            data[c]
+              = std_cxx14::make_unique<Functions::InterpolatedUniformGridData<dim>> (grid_extent,
+                                                                                     table_intervals,
+                                                                                     raw_data[c]);
+          else
+            data[c]
+              = std_cxx14::make_unique<Functions::InterpolatedTensorProductGridData<dim>> (coordinate_values,
+                                                                                           raw_data[c]);
+        }
+    }
+
+
+
     template <int dim>
     void
     AsciiDataLookup<dim>::load_file(const std::string &filename,
                                     const MPI_Comm &comm)
     {
+      // Grab the values already stored in this class (if they exist), this way we can
+      // check if somebody changes the size of the table over time and error out (see below)
+      TableIndices<dim> new_table_points = this->table_points;
+      std::vector<std::string> column_names;
+
       // Read data from disk and distribute among processes
       std::stringstream in(read_and_distribute_file_content(filename, comm));
 
@@ -1780,10 +1849,10 @@ namespace aspect
                   unsigned int temp_index;
                   linestream >> temp_index;
 
-                  if (table_points[i] == 0)
-                    table_points[i] = temp_index;
+                  if (new_table_points[i] == 0)
+                    new_table_points[i] = temp_index;
                   else
-                    AssertThrow (table_points[i] == temp_index,
+                    AssertThrow (new_table_points[i] == temp_index,
                                  ExcMessage("The file grid must not change over model runtime. "
                                             "Either you prescribed a conflicting number of points in "
                                             "the input file, or the POINTS comment in your data files "
@@ -1793,7 +1862,7 @@ namespace aspect
 
       for (unsigned int i = 0; i < dim; i++)
         {
-          AssertThrow(table_points[i] != 0,
+          AssertThrow(new_table_points[i] != 0,
                       ExcMessage("Could not successfully read in the file header of the "
                                  "ascii data file <" + filename + ">. One header line has to "
                                  "be of the format: '#POINTS: N1 [N2] [N3]', where N1 and "
@@ -1846,43 +1915,68 @@ namespace aspect
                   // Note: only ASCII characters allowed
                   std::transform(column_name_or_data.begin(), column_name_or_data.end(), column_name_or_data.begin(), ::tolower);
 
-                  AssertThrow(std::find(data_component_names.begin(),data_component_names.end(),column_name_or_data)
-                              == data_component_names.end(),
+                  AssertThrow(std::find(column_names.begin(),column_names.end(),column_name_or_data)
+                              == column_names.end(),
                               ExcMessage("There are multiple fields named " + column_name_or_data +
                                          " in the data file " + filename + ". Please remove duplication to "
                                          "allow for unique association between column and name."));
 
-                  data_component_names.push_back(column_name_or_data);
+                  column_names.push_back(column_name_or_data);
                 }
               ++name_column_index;
             }
         }
 
-      /**
-       * Create table for the data. This peculiar reinit is necessary, because
-       * there is no constructor for Table, which takes TableIndices as
-       * argument.
-       */
-      data.resize(components);
-      maximum_component_value.resize(components,-std::numeric_limits<double>::max());
+      // Create table for the data. This peculiar reinit is necessary, because
+      // there is no constructor for Table, which takes TableIndices as
+      // argument.
       Table<dim,double> data_table;
-      data_table.TableBase<dim,double>::reinit(table_points);
-      std::vector<Table<dim,double> > data_tables(components+dim,data_table);
+      data_table.TableBase<dim,double>::reinit(new_table_points);
+      std::vector<Table<dim,double> > data_tables(components, data_table);
 
+      std::vector<std::vector<double>> coordinate_values(dim);
+      for (unsigned int d=0; d<dim; ++d)
+        coordinate_values[d].resize(new_table_points[d]);
 
-      // Read data lines
+      if (column_names.size()==0)
+        {
+          // set default column names:
+          for (unsigned int c=0; c<components; ++c)
+            column_names.push_back("column " + Utilities::int_to_string(c,2));
+        }
+
+      // Finally read data lines:
       unsigned int read_data_entries = 0;
       do
         {
+          // what row and column of the file are we in?
           const unsigned int column_num = read_data_entries%(components+dim);
+          const unsigned int row_num = read_data_entries/(components+dim);
+          TableIndices<dim> idx = compute_table_indices(new_table_points, row_num);
 
-          if (column_num >= dim)
+          if (column_num < dim)
             {
-              temp_data *= scale_factor;
-              maximum_component_value[column_num-dim] = std::max(maximum_component_value[column_num-dim], temp_data);
-            }
+              // This is a coordinate. Store (and check that they are consistent)
+              const double old_value = coordinate_values[column_num][idx[column_num]];
 
-          data_tables[column_num](compute_table_indices(read_data_entries)) = temp_data;
+              AssertThrow(old_value == 0. ||
+                          (std::abs(old_value-temp_data) < 1e-8*std::abs(old_value)),
+                          ExcMessage("Invalid coordinate "
+                                     + Utilities::int_to_string(column_num) + " in row "
+                                     + Utilities::int_to_string(row_num)
+                                     + " in file " + filename +
+                                     "\nThis class expects the coordinates to be structured, meaning "
+                                     "the coordinate values in each coordinate direction repeat exactly "
+                                     "each time."));
+
+              coordinate_values[column_num][idx[column_num]] = temp_data;
+            }
+          else
+            {
+              // This is a data value, so scale and store:
+              const unsigned int component = column_num - dim;
+              data_tables[component](idx) = temp_data * scale_factor;
+            }
 
           ++read_data_entries;
         }
@@ -1903,86 +1997,8 @@ namespace aspect
                               "of the file. Please check the number of data "
                               "lines against the POINTS header in the file."));
 
-      // In case the data is specified on a grid that is equidistant
-      // in each coordinate direction, we only need to store
-      // (besides the data) the number of intervals in each direction and
-      // the begin- and endpoints of the coordinates.
-      // In case the grid is not equidistant, we need to keep
-      // all the coordinates in each direction, which is more costly.
-      // Here we fill the data structures needed for both cases,
-      // and check whether the coordinates are equidistant or not.
-      // We also check the requirement that the coordinates are
-      // strictly ascending.
-
-      // The number of intervals in each direction
-      std::array<unsigned int,dim> table_intervals;
-
-      // Whether or not the grid is equidistant
-      coordinate_values_are_equidistant = true;
-
-      for (unsigned int i = 0; i < dim; i++)
-        {
-          table_intervals[i] = table_points[i] - 1;
-
-          TableIndices<dim> idx;
-          double temp_coord = data_tables[i](idx);
-          double new_temp_coord = 0;
-
-          // The minimum coordinates
-          grid_extent[i].first = temp_coord;
-
-          // The first coordinate value
-          coordinate_values[i].push_back(temp_coord);
-
-          // The grid spacing
-          double grid_spacing = numbers::signaling_nan<double>();
-
-          // Loop over the rest of the coordinate points
-          for (unsigned int n = 1; n < table_points[i]; n++)
-            {
-              idx[i] = n;
-              new_temp_coord = data_tables[i](idx);
-              AssertThrow(new_temp_coord > temp_coord,
-                          ExcMessage ("Coordinates in dimension "
-                                      + int_to_string(i)
-                                      + " are not strictly ascending. "));
-
-              // Test whether grid is equidistant
-              if (n == 1)
-                grid_spacing = new_temp_coord - temp_coord;
-              else
-                {
-                  const double current_grid_spacing = new_temp_coord - temp_coord;
-                  // Compare current grid spacing with first grid spacing,
-                  // taking into account roundoff of the read-in coordinates
-                  if (std::abs(current_grid_spacing - grid_spacing) > 0.005*(current_grid_spacing+grid_spacing))
-                    coordinate_values_are_equidistant = false;
-                }
-
-              // Set the coordinate value
-              coordinate_values[i].push_back(new_temp_coord);
-
-              temp_coord = new_temp_coord;
-            }
-
-          // The maximum coordinate
-          grid_extent[i].second = temp_coord;
-        }
-
-      // For each data component, set up a GridData,
-      // its type depending on the read-in grid.
-      for (unsigned int i = 0; i < components; i++)
-        {
-          if (coordinate_values_are_equidistant)
-            data[i]
-              = std_cxx14::make_unique<Functions::InterpolatedUniformGridData<dim>> (grid_extent,
-                                                                                     table_intervals,
-                                                                                     data_tables[dim+i]);
-          else
-            data[i]
-              = std_cxx14::make_unique<Functions::InterpolatedTensorProductGridData<dim>> (coordinate_values,
-                                                                                           data_tables[dim+i]);
-        }
+      // finally create the data:
+      this->reinit(column_names, coordinate_values, data_tables);
     }
 
 
@@ -1995,17 +2011,25 @@ namespace aspect
       return data[component]->value(position);
     }
 
+    template <int dim>
+    Tensor<1,dim>
+    AsciiDataLookup<dim>::get_gradients(const Point<dim> &position,
+                                        const unsigned int component)
+    {
+      return data[component]->gradient(position,0);
+    }
+
 
     template <int dim>
     TableIndices<dim>
-    AsciiDataLookup<dim>::compute_table_indices(const unsigned int i) const
+    AsciiDataLookup<dim>::compute_table_indices(const TableIndices<dim> &sizes, const unsigned int i) const
     {
       TableIndices<dim> idx;
-      idx[0] = (i / (components+dim)) % table_points[0];
+      idx[0] = i % sizes[0];
       if (dim >= 2)
-        idx[1] = ((i / (components+dim)) / table_points[0]) % table_points[1];
+        idx[1] = (i / sizes[0]) % sizes[1];
       if (dim == 3)
-        idx[2] = (i / (components+dim)) / (table_points[0] * table_points[1]);
+        idx[2] = i / (sizes[0] * sizes[1]);
 
       return idx;
     }
@@ -2035,16 +2059,12 @@ namespace aspect
                            "text `$ASPECT_SOURCE_DIR' which will be interpreted as the path "
                            "in which the ASPECT source files were located when ASPECT was "
                            "compiled. This interpretation allows, for example, to reference "
-                           "files located in the `data/' subdirectory of ASPECT. ");
+                           "files located in the `data/' subdirectory of ASPECT.");
         prm.declare_entry ("Data file name",
                            default_filename,
                            Patterns::Anything (),
-                           "The file name of the model data. Provide file in format: "
-                           "(Velocity file name).\\%s\\%d where \\%s is a string specifying "
-                           "the boundary of the model according to the names of the boundary "
-                           "indicators (of the chosen geometry model).\\%d is any sprintf integer "
-                           "qualifier, specifying the format of the current file number. ");
-        prm.declare_entry ("Scale factor", "1",
+                           "The file name of the model data.");
+        prm.declare_entry ("Scale factor", "1.",
                            Patterns::Double (),
                            "Scalar factor, which is applied to the model data. "
                            "You might want to use this to scale the input to a "
@@ -2096,12 +2116,13 @@ namespace aspect
     AsciiDataBoundary<dim>::initialize(const std::set<types::boundary_id> &boundary_ids,
                                        const unsigned int components)
     {
-      AssertThrow ((dynamic_cast<const GeometryModel::SphericalShell<dim>*> (&this->get_geometry_model()))
-                   || (dynamic_cast<const GeometryModel::Chunk<dim>*> (&this->get_geometry_model())) != nullptr
-                   || (dynamic_cast<const GeometryModel::Sphere<dim>*> (&this->get_geometry_model())) != nullptr
-                   || (dynamic_cast<const GeometryModel::Box<dim>*> (&this->get_geometry_model())) != nullptr,
+      AssertThrow ((Plugins::plugin_type_matches<const GeometryModel::SphericalShell<dim>> (this->get_geometry_model()))
+                   || (Plugins::plugin_type_matches<const GeometryModel::Chunk<dim>> (this->get_geometry_model()))
+                   || (Plugins::plugin_type_matches<const GeometryModel::Sphere<dim>> (this->get_geometry_model()))
+                   || (Plugins::plugin_type_matches<const GeometryModel::Box<dim>> (this->get_geometry_model()))
+                   || (Plugins::plugin_type_matches<const GeometryModel::TwoMergedBoxes<dim>> (this->get_geometry_model())),
                    ExcMessage ("This ascii data plugin can only be used when using "
-                               "a spherical shell, chunk or box geometry."));
+                               "a spherical shell, chunk, box or two merged boxes geometry."));
 
 
       for (const auto &boundary_id : boundary_ids)
@@ -2131,7 +2152,8 @@ namespace aspect
                             << filename << "." << std::endl << std::endl;
 
 
-          AssertThrow(Utilities::fexists(filename) || filename.find("http://") == 0 || filename.find("https://") == 0 || filename.find("file://") == 0,
+
+          AssertThrow(Utilities::fexists(filename) || filename_is_url(filename),
                       ExcMessage (std::string("Ascii data file <")
                                   +
                                   filename
@@ -2407,6 +2429,7 @@ namespace aspect
                         << "   will continue unchanged from the last known state into the future)." << std::endl << std::endl;
     }
 
+
     template <int dim>
     double
     AsciiDataBoundary<dim>::
@@ -2414,7 +2437,12 @@ namespace aspect
                         const Point<dim>                    &position,
                         const unsigned int                   component) const
     {
-      if (this->get_time() - first_data_file_model_time >= 0.0)
+      // For initial ascii data topography, we need access to the data before get_time() is set,
+      // as this is when the grid including topography is constructed for the chunk geometry.
+      if ( (dynamic_cast<const GeometryModel::Chunk<dim>*>(&this->get_geometry_model()) != nullptr &&
+            dynamic_cast<const InitialTopographyModel::AsciiData<dim>*>(&this->get_initial_topography_model()) != nullptr &&
+            this->get_timestep_number() == numbers::invalid_unsigned_int) ||
+           this->get_time() - first_data_file_model_time >= 0.0)
         {
           const std::array<double,dim> natural_position = this->get_geometry_model().cartesian_to_natural_coordinates(position);
 
@@ -2423,7 +2451,7 @@ namespace aspect
             internal_position[i] = natural_position[i];
 
           // The chunk model has latitude as natural coordinate. We need to convert this to colatitude
-          if (dynamic_cast<const GeometryModel::Chunk<dim>*> (&this->get_geometry_model()) != nullptr && dim == 3)
+          if (Plugins::plugin_type_matches<const GeometryModel::Chunk<dim>> (this->get_geometry_model()) && dim == 3)
             {
               internal_position[2] = numbers::PI/2. - internal_position[2];
             }
@@ -2450,6 +2478,52 @@ namespace aspect
 
 
     template <int dim>
+    Tensor<1,dim-1>
+    AsciiDataBoundary<dim>::vector_gradient (const types::boundary_id             boundary_indicator,
+                                             const Point<dim>                    &position,
+                                             const unsigned int                   component) const
+    {
+      // For initial ascii data topography, we need access to the data before get_time() is set,
+      // as this is when the grid including topography is constructed for the chunk geometry.
+      if ((dynamic_cast<const GeometryModel::Chunk<dim>*>(&this->get_geometry_model()) != nullptr &&
+           dynamic_cast<const InitialTopographyModel::AsciiData<dim>*>(&this->get_initial_topography_model()) != nullptr &&
+           this->get_timestep_number() == numbers::invalid_unsigned_int) ||
+          this->get_time() - first_data_file_model_time >= 0.0 )
+        {
+          const std::array<double,dim> natural_position = this->get_geometry_model().cartesian_to_natural_coordinates(position);
+
+          Point<dim> internal_position;
+          for (unsigned int i = 0; i < dim; i++)
+            internal_position[i] = natural_position[i];
+
+          // The chunk model has latitude as natural coordinate. We need to convert this to colatitude
+          if (dynamic_cast<const GeometryModel::Chunk<dim>*> (&this->get_geometry_model()) != nullptr && dim == 3)
+            {
+              internal_position[2] = numbers::PI/2. - internal_position[2];
+            }
+
+          const std::array<unsigned int,dim-1> boundary_dimensions =
+            get_boundary_dimensions(boundary_indicator);
+
+          Point<dim-1> data_position;
+          for (unsigned int i = 0; i < dim-1; ++i)
+            data_position[i] = internal_position[boundary_dimensions[i]];
+
+          const Tensor<1,dim-1>  gradients = lookups.find(boundary_indicator)->second->get_gradients(data_position,component);
+
+          if (!time_dependent)
+            return gradients;
+
+          const Tensor<1,dim-1> old_gradients = old_lookups.find(boundary_indicator)->second->get_gradients(data_position,component);
+
+          return time_weight * gradients + (1 - time_weight) * old_gradients;
+        }
+      else
+        return Tensor<1,dim-1>();
+    }
+
+
+    template <int dim>
     double
     AsciiDataBoundary<dim>::get_maximum_component_value (const types::boundary_id boundary_indicator, const unsigned int component) const
     {
@@ -2471,14 +2545,22 @@ namespace aspect
 
       prm.enter_subsection (subsection_name);
       {
+        prm.declare_entry ("Data file name",
+                           default_filename,
+                           Patterns::Anything (),
+                           "The file name of the model data. Provide file in format: "
+                           "(File name).\\%s\\%d, where \\%s is a string specifying "
+                           "the boundary of the model according to the names of the boundary "
+                           "indicators (of the chosen geometry model), and \\%d is any sprintf "
+                           "integer qualifier specifying the format of the current file number.");
         prm.declare_entry ("Data file time step", "1e6",
-                           Patterns::Double (0),
+                           Patterns::Double (0.),
                            "Time step between following data files. "
                            "Depending on the setting of the global `Use years in output instead of seconds' flag "
                            "in the input file, this number is either interpreted as seconds or as years. "
                            "The default is one million, i.e., either one million seconds or one million years.");
         prm.declare_entry ("First data file model time", "0",
-                           Patterns::Double (0),
+                           Patterns::Double (0.),
                            "Time from which on the data file with number `First data "
                            "file number' is used as boundary condition. Until this "
                            "time, a boundary condition equal to zero everywhere is assumed. "
@@ -2539,16 +2621,17 @@ namespace aspect
       AssertThrow ((Plugins::plugin_type_matches<GeometryModel::SphericalShell<dim> >(this->get_geometry_model()) ||
                     Plugins::plugin_type_matches<GeometryModel::Chunk<dim> >(this->get_geometry_model()) ||
                     Plugins::plugin_type_matches<GeometryModel::Sphere<dim> >(this->get_geometry_model()) ||
-                    Plugins::plugin_type_matches<GeometryModel::Box<dim> >(this->get_geometry_model())),
+                    Plugins::plugin_type_matches<GeometryModel::Box<dim> >(this->get_geometry_model())) ||
+                   Plugins::plugin_type_matches<GeometryModel::TwoMergedBoxes<dim>> (this->get_geometry_model()),
                    ExcMessage ("This ascii data plugin can only be used when using "
-                               "a spherical shell, chunk, sphere or box geometry."));
+                               "a spherical shell, chunk, sphere, box or two merged boxes geometry."));
 
       // Create the lookups for each file
       number_of_layer_boundaries = data_file_names.size();
       for (unsigned int i=0; i<number_of_layer_boundaries; ++i)
         {
           const std::string filename = data_directory + data_file_names[i];
-          AssertThrow(Utilities::fexists(filename),
+          AssertThrow(Utilities::fexists(filename) || filename_is_url(filename),
                       ExcMessage (std::string("Ascii data file <")
                                   +
                                   filename
@@ -2584,7 +2667,7 @@ namespace aspect
 
       double vertical_position;
       Point<dim-1> horizontal_position;
-      if (Plugins::plugin_type_matches<GeometryModel::Box<dim> >(this->get_geometry_model()))
+      if (this->get_geometry_model().natural_coordinate_system() == Utilities::Coordinates::CoordinateSystem::cartesian)
         {
           // in cartesian coordinates, the vertical component comes last
           vertical_position = internal_position[dim-1];
@@ -2704,9 +2787,11 @@ namespace aspect
     void
     AsciiDataInitial<dim>::initialize (const unsigned int components)
     {
-      AssertThrow ((dynamic_cast<const GeometryModel::SphericalShell<dim>*> (&this->get_geometry_model()))
-                   || (dynamic_cast<const GeometryModel::Chunk<dim>*> (&this->get_geometry_model())) != nullptr
-                   || (dynamic_cast<const GeometryModel::Box<dim>*> (&this->get_geometry_model())) != nullptr,
+      AssertThrow ((Plugins::plugin_type_matches<const GeometryModel::SphericalShell<dim>> (this->get_geometry_model()))
+                   || (Plugins::plugin_type_matches<const GeometryModel::Chunk<dim>> (this->get_geometry_model()))
+                   || (Plugins::plugin_type_matches<const GeometryModel::Sphere<dim>> (this->get_geometry_model()))
+                   || (Plugins::plugin_type_matches<const GeometryModel::Box<dim>> (this->get_geometry_model()))
+                   || (Plugins::plugin_type_matches<const GeometryModel::TwoMergedBoxes<dim>> (this->get_geometry_model())),
                    ExcMessage ("This ascii data plugin can only be used when using "
                                "a spherical shell, chunk, or box geometry."));
 
@@ -2719,7 +2804,8 @@ namespace aspect
                         << filename << "." << std::endl << std::endl;
 
 
-      AssertThrow(Utilities::fexists(filename) || filename.find("http://") == 0 || filename.find("https://") == 0 || filename.find("file://") == 0,
+
+      AssertThrow(Utilities::fexists(filename) || filename_is_url(filename),
                   ExcMessage (std::string("Ascii data file <")
                               +
                               filename
@@ -2738,8 +2824,8 @@ namespace aspect
     {
       Point<dim> internal_position = position;
 
-      if (dynamic_cast<const GeometryModel::SphericalShell<dim>*> (&this->get_geometry_model()) != nullptr
-          || (dynamic_cast<const GeometryModel::Chunk<dim>*> (&this->get_geometry_model())) != nullptr)
+      if (Plugins::plugin_type_matches<const GeometryModel::SphericalShell<dim>> (this->get_geometry_model())
+          || (Plugins::plugin_type_matches<const GeometryModel::Chunk<dim>> (this->get_geometry_model())))
         {
           const std::array<double,dim> spherical_position =
             Utilities::Coordinates::cartesian_to_spherical_coordinates(position);
@@ -2766,7 +2852,8 @@ namespace aspect
 
       const std::string filename = this->data_directory + this->data_file_name;
 
-      AssertThrow(Utilities::fexists(filename) || filename.find("http://") == 0 || filename.find("https://") == 0 || filename.find("file://") == 0,
+
+      AssertThrow(Utilities::fexists(filename) || filename_is_url(filename),
                   ExcMessage (std::string("Ascii data file <")
                               +
                               filename
@@ -3386,17 +3473,145 @@ namespace aspect
     }
 
 
-    // Explicit instantiations
+    template <int dim, typename VectorType>
+    void
+    project_cellwise(const Mapping<dim>                                        &mapping,
+                     const DoFHandler<dim>                                     &dof_handler,
+                     const unsigned int                                         component_index,
+                     const Quadrature<dim>                                     &quadrature,
+                     const std::function<void(
+                       const typename DoFHandler<dim>::active_cell_iterator &,
+                       const std::vector<Point<dim> > &,
+                       std::vector<double> &)>                                 &function,
+                     VectorType                                                &vec_result)
+    {
+      const FEValuesExtractors::Scalar extractor(component_index);
 
-#define INSTANTIATE(dim)						\
-    template								\
-    IndexSet extract_locally_active_dofs_with_component(const DoFHandler<dim> &, \
-							const ComponentMask &); \
-    template								\
-    std::vector<std::string>						\
-    expand_dimensional_variable_names<dim> (const std::vector<std::string> &var_declarations);
+      UpdateFlags update_flags = UpdateFlags(update_values   |
+                                             update_quadrature_points |
+                                             update_JxW_values);
+
+      FEValues<dim> fe_values (mapping, dof_handler.get_fe(), quadrature, update_flags);
+
+      const unsigned int
+      dofs_per_cell = fe_values.dofs_per_cell,
+      n_q_points    = fe_values.n_quadrature_points;
+
+      std::vector<types::global_dof_index> local_dof_indices (dofs_per_cell);
+      Vector<double> cell_vector (dofs_per_cell);
+      Vector<double> local_projection (dofs_per_cell);
+      FullMatrix<double> local_mass_matrix (dofs_per_cell, dofs_per_cell);
+
+      std::vector<double> rhs_values(n_q_points);
+
+      for (const auto &cell : dof_handler.active_cell_iterators())
+        if (cell->is_locally_owned())
+          {
+            // For each cell, create a local mass matrix and rhs.
+            cell->get_dof_indices (local_dof_indices);
+            fe_values.reinit(cell);
+
+            function(cell, fe_values.get_quadrature_points(), rhs_values);
+
+            cell_vector = 0;
+            local_mass_matrix = 0;
+            for (unsigned int point=0; point<n_q_points; ++point)
+              for (unsigned int i=0; i<dofs_per_cell; ++i)
+                {
+                  if (dof_handler.get_fe().system_to_component_index(i).first == component_index)
+                    cell_vector(i) +=
+                      rhs_values[point] *
+                      fe_values[extractor].value(i,point) *
+                      fe_values.JxW(point);
+
+                  for (unsigned int j=0; j<dofs_per_cell; ++j)
+                    if ((dof_handler.get_fe().system_to_component_index(i).first ==
+                         component_index)
+                        &&
+                        (dof_handler.get_fe().system_to_component_index(j).first ==
+                         component_index))
+                      local_mass_matrix(j,i) += (fe_values[extractor].value(i,point) * fe_values[extractor].value(j,point) *
+                                                 fe_values.JxW(point));
+                    else if (i == j)
+                      local_mass_matrix(i,j) = 1.;
+                }
+
+            // now invert the local mass matrix and multiply it with the rhs
+            local_mass_matrix.gauss_jordan();
+            local_mass_matrix.vmult (local_projection, cell_vector);
+
+            // then set the global solution vector to the values just computed
+            cell->set_dof_values (local_projection, vec_result);
+          }
+    }
+
+
+
+
+    template <int dim>
+    VectorFunctionFromVelocityFunctionObject<dim>::
+    VectorFunctionFromVelocityFunctionObject
+    (const unsigned int n_components,
+     const std::function<Tensor<1,dim> (const Point<dim> &)> &function_object)
+      :
+      Function<dim>(n_components),
+      function_object (function_object)
+    {
+    }
+
+
+
+    template <int dim>
+    double
+    VectorFunctionFromVelocityFunctionObject<dim>::value (const Point<dim> &p,
+                                                          const unsigned int component) const
+    {
+      Assert (component < this->n_components,
+              ExcIndexRange (component, 0, this->n_components));
+
+      if (component < dim)
+        {
+          const Tensor<1,dim> v = function_object(p);
+          return v[component];
+        }
+      else
+        return 0;
+    }
+
+
+
+    template <int dim>
+    void
+    VectorFunctionFromVelocityFunctionObject<dim>::
+    vector_value (const Point<dim>   &p,
+                  Vector<double>     &values) const
+    {
+      AssertDimension(values.size(), this->n_components);
+
+      // set everything to zero, and then the right components to their correct values
+      values = 0;
+
+      const Tensor<1,dim> v = function_object(p);
+      for (unsigned int d=0; d<dim; ++d)
+        values(d) = v[d];
+    }
+
+// Explicit instantiations
+
+#define INSTANTIATE(dim) \
+  template \
+  IndexSet extract_locally_active_dofs_with_component(const DoFHandler<dim> &, \
+                                                      const ComponentMask &); \
+  template \
+  std::vector<std::string> \
+  expand_dimensional_variable_names<dim> (const std::vector<std::string> &var_declarations); \
+  \
+  template \
+  class VectorFunctionFromVelocityFunctionObject<dim>;
 
     ASPECT_INSTANTIATE(INSTANTIATE)
+
+#undef INSTANTIATE
 
 
 
@@ -3488,5 +3703,50 @@ namespace aspect
                                                const unsigned int n_rows,
                                                const unsigned int n_columns,
                                                const std::string &property_name);
+
+    template
+    void
+    project_cellwise(const Mapping<2> &mapping,
+                     const DoFHandler<2> &dof_handler,
+                     const unsigned int component_index,
+                     const Quadrature<2> &quadrature,
+                     const std::function<void(
+                       const DoFHandler<2>::active_cell_iterator &,
+                       const std::vector<Point<2> > &,
+                       std::vector<double> &)> &function,
+                     dealii::LinearAlgebra::distributed::Vector<double> &vec_result);
+    template
+    void
+    project_cellwise(const Mapping<3> &mapping,
+                     const DoFHandler<3> &dof_handler,
+                     const unsigned int component_index,
+                     const Quadrature<3> &quadrature,
+                     const std::function<void(
+                       const DoFHandler<3>::active_cell_iterator &,
+                       const std::vector<Point<3> > &,
+                       std::vector<double> &)> &function,
+                     dealii::LinearAlgebra::distributed::Vector<double> &vec_result);
+    template
+    void
+    project_cellwise(const Mapping<2> &mapping,
+                     const DoFHandler<2> &dof_handler,
+                     const unsigned int component_index,
+                     const Quadrature<2> &quadrature,
+                     const std::function<void(
+                       const DoFHandler<2>::active_cell_iterator &,
+                       const std::vector<Point<2> > &,
+                       std::vector<double> &)> &function,
+                     LinearAlgebra::BlockVector &vec_result);
+    template
+    void
+    project_cellwise(const Mapping<3> &mapping,
+                     const DoFHandler<3> &dof_handler,
+                     const unsigned int component_index,
+                     const Quadrature<3> &quadrature,
+                     const std::function<void(
+                       const DoFHandler<3>::active_cell_iterator &,
+                       const std::vector<Point<3> > &,
+                       std::vector<double> &)> &function,
+                     LinearAlgebra::BlockVector &vec_result);
   }
 }

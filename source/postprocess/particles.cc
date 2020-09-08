@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2011 - 2019 by the authors of the ASPECT code.
+  Copyright (C) 2011 - 2020 by the authors of the ASPECT code.
 
  This file is part of ASPECT.
 
@@ -20,6 +20,7 @@
 
 #include <aspect/global.h>
 #include <aspect/postprocess/particles.h>
+#include <aspect/particle/world.h>
 #include <aspect/utilities.h>
 
 #include <boost/archive/text_oarchive.hpp>
@@ -99,16 +100,10 @@ namespace aspect
             // If the property has dim components, we treat it as vector
             if (n_components == dim)
               {
-#if DEAL_II_VERSION_GTE(9,1,0)
-                vector_datasets.push_back(std::make_tuple(field_position+1,
-                                                          field_position+n_components,
+                vector_datasets.push_back(std::make_tuple(property_index_to_output_index[field_position],
+                                                          property_index_to_output_index[field_position]+n_components-1,
                                                           field_name,
                                                           DataComponentInterpretation::component_is_part_of_vector));
-#else
-                vector_datasets.push_back(std::make_tuple(field_position+1,
-                                                          field_position+n_components,
-                                                          field_name));
-#endif
               }
           }
 
@@ -152,7 +147,6 @@ namespace aspect
         return dataset_names;
       }
 
-#if DEAL_II_VERSION_GTE(9,1,0)
       template <int dim>
       std::vector<
       std::tuple<unsigned int,
@@ -162,15 +156,6 @@ namespace aspect
       {
         return vector_datasets;
       }
-#else
-      template <int dim>
-      std::vector<std::tuple<unsigned int, unsigned int, std::string> >
-      ParticleOutput<dim>::get_vector_data_ranges () const
-      {
-        return vector_datasets;
-      }
-#endif
-
     }
 
     template <int dim>
@@ -192,34 +177,6 @@ namespace aspect
       // make sure a thread that may still be running in the background,
       // writing data, finishes
       background_thread.join ();
-    }
-
-    template <int dim>
-    void
-    Particles<dim>::generate_particles()
-    {
-      world.generate_particles();
-    }
-
-    template <int dim>
-    void
-    Particles<dim>::initialize_particles()
-    {
-      world.initialize_particles();
-    }
-
-    template <int dim>
-    const Particle::World<dim> &
-    Particles<dim>::get_particle_world() const
-    {
-      return world;
-    }
-
-    template <int dim>
-    Particle::World<dim> &
-    Particles<dim>::get_particle_world()
-    {
-      return world;
     }
 
     template <int dim>
@@ -333,11 +290,9 @@ namespace aspect
         // the global .visit file needs the relative path because it sits a
         // directory above
         std::vector<std::string> filenames_with_path;
-        for (std::vector<std::string>::const_iterator it = filenames.begin();
-             it != filenames.end();
-             ++it)
+        for (const auto &filename : filenames)
           {
-            filenames_with_path.push_back("particles/" + (*it));
+            filenames_with_path.push_back("particles/" + filename);
           }
 
         output_file_names_by_timestep.push_back (filenames_with_path);
@@ -363,12 +318,7 @@ namespace aspect
       if (std::isnan(last_output_time))
         last_output_time = this->get_time() - output_interval;
 
-      // Do not advect the particles in the initial refinement stage
-      const bool in_initial_refinement = (this->get_timestep_number() == 0)
-                                         && (this->get_pre_refinement_step() < this->get_parameters().initial_adaptive_refinement);
-      if (!in_initial_refinement)
-        // Advance the particles in the world to the current time
-        world.advance_timestep();
+      const Particle::World<dim> &world = this->get_particle_world();
 
       statistics.add_value("Number of advected particles",world.n_global_particles());
 
@@ -377,10 +327,6 @@ namespace aspect
       if (this->get_time() < last_output_time + output_interval)
         return std::make_pair("Number of advected particles:",
                               Utilities::int_to_string(world.n_global_particles()));
-
-
-      if (world.get_property_manager().need_update() == Particle::Property::update_output_step)
-        world.update_particles();
 
       if (output_file_number == numbers::invalid_unsigned_int)
         output_file_number = 0;
@@ -402,17 +348,15 @@ namespace aspect
                                                this->get_time() / year_in_seconds :
                                                this->get_time());
 
-      for (std::vector<std::string>::iterator output_format = output_formats.begin();
-           output_format != output_formats.end();
-           ++output_format)
+      for (const auto &output_format : output_formats)
         {
-          if (*output_format == "none")
+          if (output_format == "none")
             {
               // If we do not write output return early with the number of advected particles
               return std::make_pair("Number of advected particles:",
                                     Utilities::int_to_string(world.n_global_particles()));
             }
-          else if (*output_format=="hdf5")
+          else if (output_format=="hdf5")
             {
               const std::string particle_file_name = "particles/" + particle_file_prefix + ".h5";
               const std::string xdmf_filename = "particles.xdmf";
@@ -433,7 +377,7 @@ namespace aspect
               data_out.write_xdmf_file(xdmf_entries, this->get_output_directory() + xdmf_filename,
                                        this->get_mpi_communicator());
             }
-          else if (*output_format == "vtu")
+          else if (output_format == "vtu")
             {
               // Write master files (.pvtu,.pvd,.visit) on the master process
               const int my_id = Utilities::MPI::this_mpi_process(this->get_mpi_communicator());
@@ -482,7 +426,7 @@ namespace aspect
                   {
                     std::ostringstream tmp;
 
-                    data_out.write (tmp, DataOutBase::parse_output_format(*output_format));
+                    data_out.write (tmp, DataOutBase::parse_output_format(output_format));
                     file_contents = new std::string (tmp.str());
                   }
 
@@ -513,10 +457,12 @@ namespace aspect
                   int color = my_id % group_files;
 
                   MPI_Comm comm;
-                  MPI_Comm_split(this->get_mpi_communicator(), color, my_id, &comm);
+                  int ierr = MPI_Comm_split(this->get_mpi_communicator(), color, my_id, &comm);
+                  AssertThrowMPI(ierr);
 
                   data_out.write_vtu_in_parallel(filename.c_str(), comm);
-                  MPI_Comm_free(&comm);
+                  ierr = MPI_Comm_free(&comm);
+                  AssertThrowMPI(ierr);
                 }
             }
           // Write in a different format than hdf5 or vtu. This case is supported, but is not
@@ -533,14 +479,14 @@ namespace aspect
                                            + "."
                                            +  Utilities::int_to_string (myid, 4)
                                            + DataOutBase::default_suffix
-                                           (DataOutBase::parse_output_format(*output_format));
+                                           (DataOutBase::parse_output_format(output_format));
 
               std::ofstream out (filename.c_str());
 
               AssertThrow(out,
                           ExcMessage("Unable to open file for writing: " + filename +"."));
 
-              data_out.write (out, DataOutBase::parse_output_format(*output_format));
+              data_out.write (out, DataOutBase::parse_output_format(output_format));
             }
         }
 
@@ -598,7 +544,7 @@ namespace aspect
       std::ostringstream os;
       aspect::oarchive oa (os);
 
-      world.save(os);
+      this->get_particle_world().save(os);
       oa << (*this);
 
       status_strings["Particles"] = os.str();
@@ -616,7 +562,7 @@ namespace aspect
           aspect::iarchive ia (is);
 
           // Load the particle world
-          world.load(is);
+          this->get_particle_world().load(is);
 
           ia >> (*this);
         }
@@ -632,7 +578,7 @@ namespace aspect
         prm.enter_subsection("Particles");
         {
           prm.declare_entry ("Time between data output", "1e8",
-                             Patterns::Double (0),
+                             Patterns::Double (0.),
                              "The time interval between each generation of "
                              "output files. A value of zero indicates that "
                              "output should be generated every time step.\n\n"
@@ -678,7 +624,7 @@ namespace aspect
 
           prm.declare_entry ("Exclude output properties", "",
                              Patterns::Anything(),
-                             "A comma seperated list of strings which exclude all particle"
+                             "A comma separated list of strings which exclude all particle"
                              "property fields which contain these strings. If one of the "
                              "entries is 'all', only a id will be provided for every point.");
         }
@@ -757,12 +703,6 @@ namespace aspect
         prm.leave_subsection ();
       }
       prm.leave_subsection ();
-
-      // Initialize the particle world
-      if (SimulatorAccess<dim> *sim = dynamic_cast<SimulatorAccess<dim>*>(&world))
-        sim->initialize_simulator (this->get_simulator());
-      world.parse_parameters(prm);
-      world.initialize();
     }
   }
 }
@@ -779,6 +719,8 @@ namespace aspect
   template class ParticleOutput<dim>;
 
       ASPECT_INSTANTIATE(INSTANTIATE)
+
+#undef INSTANTIATE
     }
 
     ASPECT_REGISTER_POSTPROCESSOR(Particles,

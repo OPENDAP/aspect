@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2016 - 2019 by the authors of the ASPECT code.
+  Copyright (C) 2016 - 2020 by the authors of the ASPECT code.
 
   This file is part of ASPECT.
 
@@ -24,6 +24,7 @@
 #include <aspect/simulator/assemblers/stokes.h>
 
 #include <aspect/simulator.h>
+#include <aspect/citation_info.h>
 
 namespace aspect
 {
@@ -177,7 +178,7 @@ namespace aspect
         prm.enter_subsection ("Newton solver parameters");
         {
           prm.declare_entry ("Nonlinear Newton solver switch tolerance", "1e-5",
-                             Patterns::Double(0,1),
+                             Patterns::Double(0., 1.),
                              "A relative tolerance with respect to the residual of the first "
                              "iteration, up to which the nonlinear Picard solver will iterate, "
                              "before changing to the Newton solver.");
@@ -205,7 +206,7 @@ namespace aspect
                              "residual at the time when the Newton solver is switched on.");
 
           prm.declare_entry ("Maximum linear Stokes solver tolerance", "0.9",
-                             Patterns::Double (0,1),
+                             Patterns::Double (0., 1.),
                              "The linear Stokes solver tolerance is dynamically chosen for the Newton solver, based "
                              "on the Eisenstat walker 1994 paper (https://doi.org/10.1137/0917003), equation 2.2. "
                              "Because this value can become larger then one, we limit this value by this parameter.");
@@ -214,7 +215,7 @@ namespace aspect
                              Patterns::Selection ("SPD|PD|symmetric|none"),
                              "This parameters allows for the stabilization of the preconditioner. If one derives the Newton "
                              "method without any modifications, the matrix created for the preconditioning is not necessarily "
-                             "Symmetric Positive Definite. This is problematic (see \\cite{FBTGS18}). When `none' is chosen, "
+                             "Symmetric Positive Definite. This is problematic (see \\cite{FBTGS19}). When `none' is chosen, "
                              "the preconditioner is not stabilized. The `symmetric' parameters symmetrizes the matrix, and `PD' makes "
                              "the matrix Positive Definite. `SPD' is the full stabilization, where the matrix is guaranteed Symmetric "
                              "Positive Definite.");
@@ -223,7 +224,7 @@ namespace aspect
                              Patterns::Selection ("SPD|PD|symmetric|none"),
                              "This parameters allows for the stabilization of the velocity block. If one derives the Newton "
                              "method without any modifications, the matrix created for the velocity block is not necessarily "
-                             "Symmetric Positive Definite. This is problematic (see \\cite{FBTGS18}). When `none' is chosen, "
+                             "Symmetric Positive Definite. This is problematic (see \\cite{FBTGS19}). When `none' is chosen, "
                              "the velocity block is not stabilized. The `symmetric' parameters symmetrizes the matrix, and `PD' makes "
                              "the matrix Positive Definite. `SPD' is the full stabilization, where the matrix is guaranteed Symmetric "
                              "Positive Definite.");
@@ -236,7 +237,7 @@ namespace aspect
 
 
           prm.declare_entry ("SPD safety factor", "0.9",
-                             Patterns::Double (0,1),
+                             Patterns::Double (0., 1.),
                              "When stabilizing the Newton matrix, we can encounter situations where the coefficient inside the elliptic (top-left) "
                              "block becomes negative or zero. This coefficient has the form $1+x$ where $x$ can sometimes be smaller than $-1$. In "
                              "this case, the top-left block of the matrix is no longer positive definite, and both preconditioners and iterative "
@@ -266,6 +267,7 @@ namespace aspect
     Parameters::
     parse_parameters (ParameterHandler &prm)
     {
+      CitationInfo::add("NewtonSolver");
       prm.enter_subsection ("Solver parameters");
       {
         prm.enter_subsection ("Newton solver parameters");
@@ -329,5 +331,7 @@ namespace aspect
   }
 
   ASPECT_INSTANTIATE(INSTANTIATE)
+
+#undef INSTANTIATE
 
 }

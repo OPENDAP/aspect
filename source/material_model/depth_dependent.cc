@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2011 - 2019 by the authors of the ASPECT code.
+  Copyright (C) 2011 - 2020 by the authors of the ASPECT code.
 
   This file is part of ASPECT.
 
@@ -166,10 +166,10 @@ namespace aspect
                                   typename Interface<dim>::MaterialModelOutputs &out) const
     {
       base_model->evaluate(in,out);
-      if (in.strain_rate.size())
+      if (in.requests_property(MaterialProperties::viscosity))
         {
           // Scale the base model viscosity value by the depth dependent prefactor
-          for (unsigned int i=0; i < out.viscosities.size(); ++i)
+          for (unsigned int i=0; i < out.n_evaluation_points(); ++i)
             {
               const double depth = this->get_geometry_model().depth(in.position[i]);
               out.viscosities[i] *= calculate_depth_dependent_prefactor( depth );
@@ -196,29 +196,28 @@ namespace aspect
                             "that for more information.");
           prm.declare_entry ("Depth dependence method", "None",
                              Patterns::Selection("Function|File|List|None"),
-                             "Method that is used to specify how the viscosity should vary with depth. ");
-          prm.declare_entry ("Data directory", "./",
+                             "Method that is used to specify how the viscosity should vary with depth.");
+          prm.declare_entry ("Data directory", "$ASPECT_SOURCE_DIR/data/material-model/depth-dependent/",
                              Patterns::DirectoryName (),
                              "The path to the model data. The path may also include the special "
                              "text `$ASPECT_SOURCE_DIR' which will be interpreted as the path "
                              "in which the ASPECT source files were located when ASPECT was "
                              "compiled. This interpretation allows, for example, to reference "
-                             "files located in the `data/' subdirectory of ASPECT. ");
-          prm.declare_entry("Viscosity depth file", "visc-depth.txt",
+                             "files located in the `data/' subdirectory of ASPECT.");
+          prm.declare_entry("Viscosity depth file", "visc_depth.txt",
                             Patterns::Anything (),
-                            "The name of the file containing depth-dependent viscosity data. ");
-
+                            "The name of the file containing depth-dependent viscosity data.");
           prm.declare_entry("Depth list", "", Patterns::List(Patterns::Double ()),
                             "A comma-separated list of depth values for use with the ``List'' "
                             "``Depth dependence method''. The list must be provided in order of "
                             "increasing depth, and the last value must be greater than or equal to "
                             "the maximal depth of the model. The depth list is interpreted as a layered "
                             "viscosity structure and the depth values specify the maximum depths of each "
-                            "layer. ");
+                            "layer.");
           prm.declare_entry("Viscosity list", "", Patterns::List(Patterns::Double ()),
                             "A comma-separated list of viscosity values, corresponding to the depth values "
                             "provided in ``Depth list''. The number of viscosity values specified here must "
-                            "be the same as the number of depths provided in ``Depth list'' ");
+                            "be the same as the number of depths provided in ``Depth list''.");
 
           prm.enter_subsection("Viscosity depth function");
           {

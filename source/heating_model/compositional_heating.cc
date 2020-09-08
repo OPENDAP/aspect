@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2017 - 2018 by the authors of the ASPECT code.
+  Copyright (C) 2017 - 2020 by the authors of the ASPECT code.
 
   This file is part of ASPECT.
 
@@ -61,13 +61,13 @@ namespace aspect
       {
         prm.enter_subsection("Compositional heating");
         {
-          prm.declare_entry("Compositional heating values","0",
-                            Patterns::List (Patterns::Double(0)),
+          prm.declare_entry("Compositional heating values","0.",
+                            Patterns::List (Patterns::Double(0.)),
                             "List of heat production per unit volume values for "
                             "background and compositional fields, for a total of "
-                            "N+1 values, where the first value correponds to the "
+                            "N+1 values, where the first value corresponds to the "
                             "background material, and N is the number of compositional fields. "
-                            "Units: $W/m^3$.");
+                            "Units: \\si{\\watt\\per\\meter\\cubed}.");
           prm.declare_entry ("Use compositional field for heat production averaging", "1",
                              Patterns::List(Patterns::Integer(0,1)),
                              "A list of integers with as many entries as compositional fields plus one. "
@@ -135,8 +135,7 @@ namespace aspect
                                   "compositional heating",
                                   "Implementation of a model in which magnitude of internal heat production "
                                   "is determined from fixed values assigned to each compositional "
-                                  "field. These values are interpreted as having units $W/m^3$.")
+                                  "field. These values are interpreted as having units "
+                                  "\\si{\\watt\\per\\meter\\cubed}.")
   }
 }
-
-

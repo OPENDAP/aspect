@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2011 - 2018 by the authors of the ASPECT code.
+  Copyright (C) 2011 - 2020 by the authors of the ASPECT code.
 
   This file is part of ASPECT.
 
@@ -30,7 +30,6 @@
 #include <deal.II/lac/trilinos_solver.h>
 #endif
 
-#include <deal.II/lac/pointer_matrix.h>
 #include <deal.II/base/tensor_function.h>
 
 #include <deal.II/base/quadrature_lib.h>
@@ -111,7 +110,7 @@ namespace aspect
 
 
   template <int dim>
-  void Simulator<dim>::setup_nullspace_constraints(ConstraintMatrix &constraints)
+  void Simulator<dim>::setup_nullspace_constraints(AffineConstraints<double> &constraints)
   {
     if (!(parameters.nullspace_removal & (NullspaceRemoval::linear_momentum
                                           | NullspaceRemoval::net_translation)))
@@ -483,7 +482,9 @@ namespace aspect
 {
 #define INSTANTIATE(dim) \
   template void Simulator<dim>::remove_nullspace (LinearAlgebra::BlockVector &,LinearAlgebra::BlockVector &vector); \
-  template void Simulator<dim>::setup_nullspace_constraints (ConstraintMatrix &);
+  template void Simulator<dim>::setup_nullspace_constraints (AffineConstraints<double> &);
 
   ASPECT_INSTANTIATE(INSTANTIATE)
+
+#undef INSTANTIATE
 }

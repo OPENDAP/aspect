@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2011 - 2018 by the authors of the ASPECT code.
+  Copyright (C) 2011 - 2020 by the authors of the ASPECT code.
 
   This file is part of ASPECT.
 
@@ -94,7 +94,7 @@ namespace aspect
     Compositing<dim>::evaluate(const typename Interface<dim>::MaterialModelInputs &in,
                                typename Interface<dim>::MaterialModelOutputs &out) const
     {
-      typename Interface<dim>::MaterialModelOutputs base_output(out.viscosities.size(),
+      typename Interface<dim>::MaterialModelOutputs base_output(out.n_evaluation_points(),
                                                                 this->introspection().n_compositional_fields);
 
       // Move the additional outputs to base_output so that our models can fill them if desired:
