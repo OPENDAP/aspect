@@ -1820,13 +1820,28 @@ namespace aspect
         }
     }
 
-
+#ifdef LIBDAP
+    void libdap_loader(string url)
+    {
+        // get the data
+        // re-oragnize the data
+        // call reinit
+        return;
+    }
+#endif
 
     template <int dim>
     void
     AsciiDataLookup<dim>::load_file(const std::string &filename,
                                     const MPI_Comm &comm)
     {
+#ifdef LIBDAP
+      if (filename is-a URL)
+        {
+            libdap_loader(string url);
+            return;
+        }
+#endif
       // Grab the values already stored in this class (if they exist), this way we can
       // check if somebody changes the size of the table over time and error out (see below)
       TableIndices<dim> new_table_points = this->table_points;

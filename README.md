@@ -4,6 +4,14 @@ ASPECT - Advanced Solver for Problems in Earth's ConvecTion
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3924604.svg)](https://doi.org/10.5281/zenodo.3924604)
 [![pdf manual](https://img.shields.io/badge/get-PDF-green.svg)](https://doi.org/10.6084/m9.figshare.4865333)
 
+About the OPeNDAP fork
+----------------------
+[![NSF-1740627](https://img.shields.io/badge/NSF-1740627-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1740627)
+
+OPeNDAP has added remote data access capabilities to the ASPECT code base. ASPECT
+prm files can now read data from OPeNDAP servers, saving modelers from the
+tedious process of downloading and reformating data.
+
 About
 -----
 
